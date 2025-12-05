@@ -83,3 +83,4 @@
 /home/taidac/Programming/Acascendia/obj/Debug/net10.0/Acascendia.pdb
 /home/taidac/Programming/Acascendia/obj/Debug/net10.0/Acascendia.genruntimeconfig.cache
 /home/taidac/Programming/Acascendia/obj/Debug/net10.0/ref/Acascendia.dll
+/home/taidac/Programming/Acascendia/obj/Debug/net10.0/Acascendia.sourcelink.json
