@@ -1,0 +1,47 @@
+﻿@inject ISnackbar Snackbar
+
+<MudDialog Style="background-color: transparent; box-shadow: none;">
+
+    <DialogContent>
+        <MudCard Style="width:400px; padding:24px; border-radius:16px;" Elevation="4">
+            <MudText Typo="Typo.h5" Class="mb-4">Login</MudText>
+            <MudTextField @bind-Value="UserName" Label="UserName" HelperText="UserName" Variant="Variant.Outlined" />
+            <MudTextField @bind-Value="Email" Label="Email" HelperText="Email" Variant="Variant.Outlined" />
+            <MudTextField @bind-Value="Password" InputType="InputType.Password" Label="Password" HelperText="Characters 4-8" Variant="Variant.Outlined" />
+            <MudTextField @bind-Value="RepeatPassword" InputType="InputType.Password" Label="Repeat Password" HelperText="Repeat the Password" Variant="Variant.Outlined" />
+
+            <MudStack Row="true" Spacing="2" Justify="Justify.FlexEnd" Class="mt-11">
+                <!-- Google -->
+                <MudButton Variant="Variant.Filled" Style="background-color:#DB4437; color:white; border-radius: 50px;" StartIcon="@Icons.Custom.Brands.Google">
+                    Google
+                </MudButton>
+
+                <!-- GitHub -->
+                <MudButton Variant="Variant.Filled" Style="background-color:#333333; color:white; border-radius: 50px;" StartIcon="@Icons.Custom.Brands.GitHub">
+                    GitHub
+                </MudButton>
+
+                <!-- Facebook -->
+                <MudButton Variant="Variant.Filled" Style="background-color:#4267B2; color:white; border-radius: 50px;" StartIcon="@Icons.Custom.Brands.Facebook">
+                    Facebook
+                </MudButton>
+            </MudStack>
+
+
+            <MudStack Row="true" Spacing="2" Justify="Justify.FlexEnd" Class="mt-11">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true">Login</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Warning" FullWidth="true">Register</MudButton>
+            </MudStack>
+
+        </MudCard>
+    </DialogContent>
+
+</MudDialog>
+
+@code {
+
+    public string UserName { get; set; }
+    public string Email { get; set; }
+    public string Password { get; set; }
+    public string RepeatPassword { get; set; }
+}
