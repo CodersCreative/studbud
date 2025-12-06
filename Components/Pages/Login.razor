@@ -8,6 +8,8 @@
 @inject SurrealDbClient client
 @rendermode InteractiveServer
 
+<Acascendia.Shared.DefaultLayout>
+
 <div style="display: flex; justify-content: center;">
     <MudPaper Class="pa-4" style="width : 600px; ">
         <MudText Typo="Typo.h3">Login</MudText>
@@ -25,6 +27,8 @@
     </MudPaper>
 </div>
 
+</Acascendia.Shared.DefaultLayout>
+
 @code {
     bool success;
     string[] errors = { };
@@ -33,14 +37,14 @@
     MudForm form;
 
     private async Task OnSubmit() {
-        var res = await client.Query($"SELECT * FROM user WHERE Username = {usernameField.Value} and Password = {pwField1.Value} LIMIT 1;");
+        var res = await client.Query($"SELECT * FROM user WHERE Username = {usernameField.Value.Trim()} and Password = {pwField1.Value} LIMIT 1;");
         
         var res2 = res.GetValue<List<UserInfo>>(0);
 
         if (res2 is not null) {
             if (res2.Count > 0) {
                 data.UpdateUser(res2.First());
-                navigationManager.NavigateTo("/");
+                navigationManager.NavigateTo("/dash");
             }
         }        
     }

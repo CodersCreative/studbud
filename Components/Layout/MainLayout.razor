@@ -1,94 +1,18 @@
 ﻿@inherits LayoutComponentBase
 
-<MudThemeProvider Theme="@_theme" IsDarkMode="_isDarkMode" />
-<MudPopoverProvider />
-<MudDialogProvider />
-<MudSnackbarProvider />
-@*<MudLayout>
-    <MudAppBar Elevation="1">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
-        <MudText Typo="Typo.h5" Class="ml-3">Application</MudText>
-        <MudSpacer />
-        <MudIconButton Icon="@(DarkLightModeButtonIcon)" Color="Color.Inherit" OnClick="@DarkModeToggle" />
-        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
-    </MudAppBar>
-    <MudDrawer id="nav-drawer" @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
-        <NavMenu />
-    </MudDrawer>
-    <MudMainContent Class="pt-16 pa-4">
-        @Body
-    </MudMainContent>
-</MudLayout>*@
+<MudThemeProvider Theme="@_theme" IsDarkMode="true" />
+<MudPopoverProvider/>
+<MudDialogProvider/>
+<MudSnackbarProvider/>
 
-<MudLayout Class="no-x-overflow">
-    <MudAppBar Elevation="0">
-
-
-        <MudText Typo="Typo.h5" Class="ml-3">StudBud</MudText>
-
-        @* Left-side buttons *@
-        <MudStack Row="true" Spacing="2" Class="ml-4">
-            <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/">Home</MudButton>
-            <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/study">Study</MudButton>
-            <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/print">Print</MudButton>
-        </MudStack>
-
-        <MudSpacer />
-
-        @* Right-side buttons *@
-        <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/login">Login</MudButton>
-        <MudIconButton Icon="@Icons.Material.Filled.DarkMode" />
-
-    </MudAppBar>
-
-    <!-- Background strip container covering whole screen -->
-    <div style="
-    position: fixed;
-    inset: 0;
-    overflow: hidden;
-    z-index: -1;">
-
-        <!-- First diagonal strip -->
-        <div style="
-        position:absolute;
-        top: 80%;
-        left: -30vw;
-        width: 200vw;
-        height: 80px;
-        background-color: #ff79c6;
-        transform: rotate(-25deg);">
-        </div>
-
-        <!-- Second diagonal strip -->
-        <div style="
-        position:absolute;
-        top: 65%;
-        left: -25vw;
-        width: 180vw;
-        height: 80px;
-        background-color: #7e6fff;
-        transform: rotate(15deg);">
-        </div>
-    </div>
-
-
+<MudLayout>
     <MudMainContent>
         @Body
     </MudMainContent>
-
 </MudLayout>
 
-
-
-<div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
-</div>
-
 @code {
-    private bool _drawerOpen = true;
-    private bool _isDarkMode = true;
+
     private MudTheme? _theme = null;
 
     protected override void OnInitialized()
@@ -101,16 +25,6 @@
             PaletteDark = _darkPalette,
             LayoutProperties = new LayoutProperties()
         };
-    }
-
-    private void DrawerToggle()
-    {
-        _drawerOpen = !_drawerOpen;
-    }
-
-    private void DarkModeToggle()
-    {
-        _isDarkMode = !_isDarkMode;
     }
 
     private readonly PaletteLight _lightPalette = new()
@@ -151,12 +65,4 @@
         Divider = "#292838",
         OverlayLight = "#1e1e2d80",
     };
-
-    public string DarkLightModeButtonIcon => _isDarkMode switch
-    {
-        true => Icons.Material.Rounded.AutoMode,
-        false => Icons.Material.Outlined.DarkMode,
-    };
 }
-
-
