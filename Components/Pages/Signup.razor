@@ -1,12 +1,12 @@
 @page "/signup"
 @using System.Text.RegularExpressions
 @using System.ComponentModel.DataAnnotations
+@using Acascendia.Models
 @using Microsoft.AspNetCore.Mvc
-@using Microsoft.Extensions.ObjectPool
 @using SurrealDb.Net
 @using System.Threading.Tasks
 @inject NavigationManager NavigationManager
-@inject UserInfo user
+@inject Data data
 @inject SurrealDbClient Client
 @rendermode InteractiveServer
 
@@ -24,8 +24,9 @@
             <MudTextField T="string"
                         Label="Repeat Password" HelperText="Repeat the password" @ref="pwField2" InputType="InputType.Password"
                         Validation="@(new Func<string, string>(PasswordMatch))"/>
-            <div>
+            <div style="display : flex; flex-wrap : nowrap;">
                 <MudButton OnClick="OnLogin" Variant="Variant.Filled" Color="Color.Secondary" Class="ml-auto">Login</MudButton>
+                <MudSpacer/>
                 <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Register</MudButton>
             </div>
         </MudForm>
@@ -63,12 +64,12 @@
     }
 
     private async Task OnSubmit() {
-        user = await Client.Create("user", new UserInfo {
+        data.UpdateUser(await Client.Create("user", new UserInfo {
             Username = usernameField.Value,
             Email = emailField.Value,
             Password = pwField1.Value
-        });
-        NavigationManager.NavigateTo("/counter");
+        }));
+        NavigationManager.NavigateTo("/");
     }
 
     private void OnLogin() {

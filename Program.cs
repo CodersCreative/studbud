@@ -2,6 +2,7 @@ using Acascendia.Components;
 using MudBlazor.Services;
 using SurrealDb.Net;
 using SurrealDb.Net.Models;
+using Acascendia.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,7 +18,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddMudServices();
-builder.Services.AddSingleton<UserInfo>();
+builder.Services.AddSingleton<Data>();
 builder.Services.AddSurreal(surreal);
 
 var app = builder.Build();
@@ -54,13 +55,25 @@ async Task DefineSchemaAsync(ISurrealDbClient surrealDbClient)
 DEFINE TABLE IF NOT EXISTS user SCHEMALESS;
 DEFINE FIELD IF NOT EXISTS Username ON TABLE user TYPE string;
 DEFINE FIELD IF NOT EXISTS Email ON TABLE user TYPE string;
-DEFINE FIELD IF NOT EXISTS Password ON TABLE user TYPE string; 
+DEFINE FIELD IF NOT EXISTS Password ON TABLE user TYPE string;
+
+DEFINE TABLE IF NOT EXISTS class SCHEMALESS;
+DEFINE FIELD IF NOT EXISTS Name ON TABLE class TYPE string;
+DEFINE FIELD IF NOT EXISTS Users ON TABLE class TYPE Array<string>;
+DEFINE FIELD IF NOT EXISTS Teachers ON TABLE class TYPE Array<string>;
+
+DEFINE TABLE IF NOT EXISTS chat SCHEMALESS;
+DEFINE FIELD IF NOT EXISTS Name ON TABLE class TYPE string;
+DEFINE FIELD IF NOT EXISTS Users ON TABLE class TYPE Array<string>;
 """);
 }
 
-public class UserInfo : Record
+public class Data
 {
-    public string? Username {get; set;}
-    public string? Email {get; set;}
-    public string? Password {get; set;}
+    public UserInfo? user {get; set;}
+
+    public void UpdateUser(UserInfo u)
+    {
+        user = u;
+    }
 }

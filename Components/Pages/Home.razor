@@ -1,7 +1,173 @@
 ﻿@page "/"
+@using Acascendia.Models
+@using Microsoft.Extensions.ObjectPool
+@using SurrealDb.Net
+@inject SurrealDbClient Client
+@inject Data data
+@inject SurrealDbClient Client
+@attribute [StreamRendering]
+@rendermode InteractiveServer
+
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<MudLayout>
+    <MudAppBar Elevation="1">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="ToggleLeftDrawer" />
+        <MudSpacer />
+        <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Inherit" Edge="Edge.Start" OnClick="OnAdd" />
+    </MudAppBar>
+    <MudDrawer Open="@left_open" Elevation="1">
+        <MudDrawerHeader>
+            <MudText Typo="Typo.h6">Acascendia</MudText>
+        </MudDrawerHeader>
+        <MudStack>
+            @foreach (Chat c in chats) {
+                <MudPaper>
+                    <MudText Typo="Typo.h6" Align="Align.Center">@c.Name</MudText>
+                </MudPaper>
+            }
+        </MudStack>
+    </MudDrawer>
+    <MudMainContent Class="pt-16 px-16">
+        @if (page == Page.Classes) {
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudGrid Justify="Justify.SpaceBetween">
+                        @foreach (Class c in classes) {   
+                            <MudItem xs="3">
+                                <MudPaper Class="d-flex flex-column align-center justify-center mud-width-full py-8">
+                                    <MudText Typo="Typo.h6" Align="Align.Center">@c.Name</MudText>
+                                </MudPaper>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                </MudItem>
+            </MudGrid>
+        }else {
+            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+                <MudTabPanel Text="Classes">
+                    <MudText Typo="Typo.h6">Join</MudText>
+                    <MudTextField T="string" Label="Code" @ref="codeField" />
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;">Join</MudButton>
+                    <MudText Typo="Typo.h6">Create</MudText>
+                    @if (users.Count > 2) {
+                        <MudTextField T="string" Label="Name" @ref="nameField" />
+                    }
+                    <div style="display : flex; flex-wrap : nowrap;">
+                        <MudTextField T="string" Label="Add Student" @ref="userField" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Inherit" Edge="Edge.Start" OnClick="OnAddUser"/>
+                    </div>
+                    <MudStack>
+                        @foreach (var u in users) {   
+                            <MudPaper style="display : flex; flex-wrap : nowrap; padding: 10px; margin: 10px 0 0 0; vertical-align: middle;">
+                                <MudText Typo="Typo.h6" style="text-align: center; vertical-align: middle;">@u.Username</MudText>
+                                <MudSpacer></MudSpacer>
+                                <MudIconButton Icon="@Icons.Material.Filled.Remove" OnClick="() => {OnRemoveUser(u);}" Color="Color.Inherit" Edge="Edge.Start" style="vertical-align: middle;"/>
+                            </MudPaper>
+                        }
+                    </MudStack>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;">Create</MudButton>
+                </MudTabPanel>
+                <MudTabPanel Text="Chats">
+                    <MudText Typo="Typo.h6">Create</MudText>
+                    <MudTextField T="string" Label="Name" @ref="nameField" />
+                    <div style="display : flex; flex-wrap : nowrap;">
+                        <MudTextField T="string" Label="Add User" @ref="userField" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Inherit" Edge="Edge.Start" OnClick="OnAddUser"/>
+                    </div>
+                    <MudStack>
+                        @foreach (var u in users) {   
+                            <MudPaper style="display : flex; flex-wrap : nowrap; padding: 10px; margin: 10px 0 0 0; vertical-align: middle;">
+                                <MudText Typo="Typo.h6" style="text-align: center; vertical-align: middle;">@u.Username</MudText>
+                                <MudSpacer></MudSpacer>
+                                <MudIconButton Icon="@Icons.Material.Filled.Remove" OnClick="() => {OnRemoveUser(u);}" Color="Color.Inherit" Edge="Edge.Start" style="vertical-align: middle;"/>
+                            </MudPaper>
+                        }
+                    </MudStack>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;">Create</MudButton>
+                </MudTabPanel>
+            </MudTabs>
 
-Welcome to your new app.
+            
+
+        }
+    </MudMainContent>
+</MudLayout>
+
+
+
+@code {
+    private Class[] classes = [];
+    private Chat[] chats = [];
+    private bool left_open = false;
+    private Page page = Page.Classes;
+    List<User> users = [];
+    MudTextField<string> codeField;
+    MudTextField<string> nameField;
+    MudTextField<string> userField;
+
+    enum Page {
+        Classes,
+        Add,
+    }
+
+    private void ToggleLeftDrawer()
+    {
+        left_open = !left_open;
+    }
+
+    private void OnAdd()
+    {
+        if (page == Page.Classes) {
+            page = Page.Add;
+        }else {
+            page = Page.Classes;
+        }
+    }
+    private async Task OnAddUser()
+    {
+        if (userField.Value.Trim() == data.user.Username || userField.Value.Trim().Length <= 0 || users.Find((x) => {return x.Username == userField.Value;}) is not null) {
+            await userField.Clear();
+            return;
+        }
+        var res = await Client.Query($"SELECT * FROM user WHERE Username = {userField.Value.Trim()} LIMIT 1;");
+        
+        var res2 = res.GetValue<List<User>>(0)!.First();
+
+        if (res2 is not null) {
+            await userField.Clear();
+            users.Add(res2);
+        }  
+    }
+
+    private void OnRemoveUser(User user)
+    {
+        users.Remove(user);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await Client.Query($"SELECT * FROM class WHERE Users CONTAINS {data.user.Id.ToString()};");
+        var classes_res = result.GetValue<Class[]>(0);
+        if (classes_res is not null) {
+            classes = classes_res;
+        }
+
+        result = await Client.Query($"SELECT * FROM chat WHERE Users CONTAINS {data.user.Id.ToString()};");
+        var chats_res = result.GetValue<Chat[]>(0);
+        if (chats_res is not null) {
+            chats = chats_res;
+        }
+
+        for (int i = 0; i < chats.Length; i++ ) {
+            if (chats[i].Name is null) {
+                var other = chats[i].Users.First();
+                if (other == data.user.Id.ToString()) {
+                    other = chats[i].Users[1];
+                }
+                chats[i].Name = other;
+            }
+        }
+    }
+}
