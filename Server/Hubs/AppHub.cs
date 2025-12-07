@@ -88,6 +88,46 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
         return res!.ToBase();
     }
 
+    public async Task<Class> GetClass(string id)
+    {
+        var res = await dbClient.Select<DbClass>(("class", id));
+        return res!.ToBase();
+    }
+
+    public async Task<Assignment> CreateAssignment(Assignment ass)
+    {
+        var res = await dbClient.Create("assignment", new DbAssignment(ass));
+        return res.ToBase();
+    }
+
+    public async Task<List<Assignment>> GetAssignments(string classId)
+    {
+        var result = await dbClient.Query($"SELECT * FROM assignment WHERE classId = {classId} ORDER BY due ASC;");
+        var arr = result.GetValue<List<DbAssignment>>(0);
+        if (arr is not null) {
+            return arr.Select(x => x.ToBase()).ToList();
+        } else {
+            return new List<Assignment>();
+        }
+    }
+
+    public async Task<Submission> SubmitAssignment(Submission sub)
+    {
+        var res = await dbClient.Create("submission", new DbSubmission(sub));
+        return res.ToBase();
+    }
+
+    public async Task<List<Submission>> GetSubmissions(string assignmentId)
+    {
+        var result = await dbClient.Query($"SELECT * FROM submission WHERE assignmentId = {assignmentId} ORDER BY date ASC;");
+        var arr = result.GetValue<List<DbSubmission>>(0);
+        if (arr is not null) {
+            return arr.Select(x => x.ToBase()).ToList();
+        } else {
+            return new List<Submission>();
+        }
+    }
+
     public async Task<List<Class>> GetClassesFromUser(string id)
     {
         var result = await dbClient.Query($"SELECT * FROM class WHERE userIds CONTAINS {id} OR teacherIds CONTAINS {id};");

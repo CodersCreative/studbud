@@ -6,6 +6,35 @@
 <MudSnackbarProvider/>
 
 <MudLayout>
+    <div style="
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    z-index: -1;">
+
+        <!-- First diagonal strip -->
+        <div style="
+        position:absolute;
+        top: 80%;
+        left: -30vw;
+        width: 200vw;
+        height: 80px;
+        background-color: rgba(255, 121, 198, 0.5);
+        transform: rotate(-25deg);">
+        </div>
+
+        <!-- Second diagonal strip -->
+        <div style="
+        position:absolute;
+        top: 65%;
+        left: -25vw;
+        width: 180vw;
+        height: 80px;
+        background-color: rgba(126, 111, 255, 0.5);
+        transform: rotate(15deg);">
+        </div>
+    </div>
+
     <MudMainContent>
         @Body
     </MudMainContent>

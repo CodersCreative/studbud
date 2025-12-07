@@ -1,0 +1,174 @@
+@page "/class/{classId}"
+@using Microsoft.AspNetCore.SignalR.Client
+@using studbud.Client.Shared
+@using studbud.Shared
+@using studbud.Shared.Models
+@inject NavigationManager navigationManager
+@inject HubService hubService
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+
+<PageTitle>Class</PageTitle>
+
+<MudLayout>
+	<MudAppBar Elevation="1">
+		<MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Inherit" Edge="Edge.Start"  OnClick="OnBack"/>
+		<MudText Typo="Typo.h6">@(clss?.name ?? "Loading...")</MudText>
+		<MudSpacer />
+	</MudAppBar>
+    <MudDrawerContainer Class="mud-height-full">
+        <MudDrawer @bind-Open="@open" Fixed="false" Elevation="1" Variant="@DrawerVariant.Mini" OpenMiniOnHover="true" Breakpoint="Breakpoint.None">
+            <MudNavMenu>
+                <MudNavLink Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
+                <MudNavLink Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Chat">Stream</MudNavLink>
+                <MudNavLink Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Assignment">Assignments</MudNavLink>
+            </MudNavMenu>
+        </MudDrawer>
+        <MudMainContent Style="bottom : 20px; height : auto; position : fixed;" Class="pt-16 px-16">
+            <div>
+                <h4>Stream</h4>
+                @if (messages is not null)
+                {
+                    foreach (var m in messages.OrderBy(m => m.date))
+                    {
+                        <MudPaper Class="pa-2 ma-2">@GetUserText(m.userId): @m.text</MudPaper>
+                    }
+                }
+                <MudTextField Style="margin-top : 20px;" @ref="inputField" T="string" AutoGrow Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Send" OnAdornmentClick="OnSubmit" AdornmentAriaLabel="Submit" />
+
+                <h4 style="margin-top:24px;">Assignments</h4>
+                <div>
+                    @if (assignments is null || assignments.Count == 0)
+                    {
+                        <div>No assignments</div>
+                    }
+                    else
+                    {
+                        foreach (var a in assignments)
+                        {
+                            <MudPaper Class="pa-3 ma-2">
+                                <div><b>@a.name</b> — due: @(a.due?.ToString("g") ?? "No due date")</div>
+                                <div>@a.text</div>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="() => ToggleSubmit(a.id)">Submit</MudButton>
+                                @if (showSubmitFor == a.id)
+                                {
+                                    <div class="mt-2">
+                                        <MudTextField @bind-Value="submissionText" Placeholder="Write your submission..." Lines="4" />
+                                        <MudButton OnClick="() => SubmitAssignment(a.id)" Class="mt-2">Send</MudButton>
+                                    </div>
+                                }
+                            </MudPaper>
+                        }
+                    }
+                </div>
+            </div>
+        </MudMainContent>
+    </MudDrawerContainer>
+</MudLayout>
+
+@code {
+	[Parameter]
+	public string? classId { get; set; }
+    private bool open = false;
+	private Class? clss;
+	private List<Message> messages = new();
+	private MudTextField<string>? inputField;
+	private HubConnection? hub;
+	private User? current_user;
+	private List<User> users = new();
+	private List<Assignment> assignments = new();
+	private string? showSubmitFor;
+	private string submissionText = string.Empty;
+    private Page page = Page.Home;
+
+    enum Page {
+        Home,
+        Stream,
+        Assignment,
+    }
+
+	private string GetUserText(string? userId)
+	{
+		if (current_user is null) return "Loading...";
+		if (userId is null) return "Unknown";
+		if (userId == current_user.id) return "You";
+		var u = users?.FirstOrDefault(x => x.id == userId);
+		return u?.username ?? "Unknown";
+	}
+
+
+    private void ToggleDrawer()
+    {
+        open = !open;
+    } 
+
+	private async Task OnSubmit()
+	{
+		if (inputField is null) return;
+		if (string.IsNullOrWhiteSpace(inputField.Value)) return;
+		if (current_user is null || classId is null || hub is null) return;
+
+		var msg = new Message { text = inputField.Value.Trim(), parentId = classId, date = DateTime.Now, userId = current_user.id };
+		msg = await hub.InvokeAsync<Message>(nameof(IAppHubServer.SendMessage), msg);
+		messages.Add(msg);
+		await inputField.Clear();
+	}
+
+	private void OnBack() => navigationManager.NavigateTo("/dash");
+
+	protected override async Task OnInitializedAsync()
+	{
+		await base.OnInitializedAsync();
+		hub = hubService.GetHubConnection().Build();
+
+		hub.On<Message>(nameof(IAppHubClient.ReceiveMessage), (msg) => {
+			if (msg.parentId == classId) {
+				messages.Add(msg);
+				StateHasChanged();
+			}
+		});
+
+		await hub.StartAsync();
+		messages = await hub.InvokeAsync<List<Message>>(nameof(IAppHubServer.GetMessages), classId);
+		await hub.SendAsync(nameof(IAppHubServer.ConnectToChat), classId);
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		await base.OnAfterRenderAsync(firstRender);
+		current_user = await sessionStorage.GetItemAsync<User>("user");
+		if (clss is null)
+		{
+			if (hub is null || classId is null) return;
+
+			clss = await hub.InvokeAsync<Class>(nameof(IAppHubServer.GetClass), classId);
+			if (clss?.userIds is not null)
+			{
+				users = await hub.InvokeAsync<List<User>>(nameof(IAppHubServer.GetUsers), clss.userIds);
+			}
+			assignments = await hub.InvokeAsync<List<Assignment>>(nameof(IAppHubServer.GetAssignments), classId);
+			StateHasChanged();
+		}
+	}
+
+	private void ToggleSubmit(string? assignmentId)
+	{
+		if (showSubmitFor == assignmentId) showSubmitFor = null;
+		else showSubmitFor = assignmentId;
+	}
+
+	private async Task SubmitAssignment(string? assignmentId)
+	{
+		if (assignmentId is null) return;
+		if (current_user is null || hub is null) return;
+		var sub = new Submission { assignmentId = assignmentId, userId = current_user.id, date = DateTime.Now, text = submissionText };
+		var res = await hub.InvokeAsync<Submission>(nameof(IAppHubServer.SubmitAssignment), sub);
+		submissionText = string.Empty;
+		showSubmitFor = null;
+	}
+
+	public async ValueTask DisposeAsync()
+	{
+		if (hub is not null) await hub.DisposeAsync();
+	}
+}
+

@@ -14,6 +14,11 @@ public interface IAppHubServer
     Task<List<Message>> GetMessages(string parent);
     Task<User?> GetUserFromUsername(string username);
     Task<Chat> GetChat(string id);
+    Task<Class> GetClass(string id);
+    Task<Assignment> CreateAssignment(Assignment ass);
+    Task<List<Assignment>> GetAssignments(string classId);
+    Task<Submission> SubmitAssignment(Submission sub);
+    Task<List<Submission>> GetSubmissions(string assignmentId);
     Task<List<Class>> GetClassesFromUser(string id);
     Task<List<Chat>> GetChatsFromUser(string id);
     Task<Chat> GetChatWithName(string chatId, string userId);
