@@ -1,0 +1,93 @@
+@using MudBlazor
+
+<MudLayout Class="no-x-overflow">
+    <MudAppBar Elevation="0">
+
+
+        <MudText Typo="Typo.h5" Class="ml-3">StudBud</MudText>
+
+        @* Left-side buttons *@
+        <MudStack Row="true" Spacing="2" Class="ml-4">
+            <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/">Home</MudButton>
+            <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/study">Study</MudButton>
+            <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/print">Print</MudButton>
+        </MudStack>
+
+        <MudSpacer />
+
+        @* Right-side buttons *@
+        <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/login">Login</MudButton>
+        <MudIconButton Icon="@Icons.Material.Filled.DarkMode" />
+
+    </MudAppBar>
+
+    <!-- Background strip container covering whole screen -->
+    <div style="
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    z-index: -1;">
+
+        <!-- First diagonal strip -->
+        <div style="
+        position:absolute;
+        top: 80%;
+        left: -30vw;
+        width: 200vw;
+        height: 80px;
+        background-color: #ff79c6;
+        transform: rotate(-25deg);">
+        </div>
+
+        <!-- Second diagonal strip -->
+        <div style="
+        position:absolute;
+        top: 65%;
+        left: -25vw;
+        width: 180vw;
+        height: 80px;
+        background-color: #7e6fff;
+        transform: rotate(15deg);">
+        </div>
+    </div>
+
+
+    <MudMainContent>
+        @ChildContent
+    </MudMainContent>
+
+</MudLayout>
+
+
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+    private bool _drawerOpen = true;
+    private bool _isDarkMode = true;
+
+    private void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+        StateHasChanged();
+    }
+
+    private void DarkModeToggle()
+    {
+        _isDarkMode = !_isDarkMode;
+        StateHasChanged();
+    }
+
+    public string DarkLightModeButtonIcon => _isDarkMode switch
+    {
+        true => Icons.Material.Rounded.AutoMode,
+        false => Icons.Material.Outlined.DarkMode,
+    };
+}
+

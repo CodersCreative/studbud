@@ -1,0 +1,145 @@
+﻿@page "/chat/{chatId}"
+@using Microsoft.AspNetCore.SignalR.Client
+@using studbud.Client.Shared
+@using studbud.Shared
+@using studbud.Shared.Models
+@using System.Text.RegularExpressions
+@inject NavigationManager navigationManager
+@inject HubService hubService
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@implements IAsyncDisposable
+
+<PageTitle>Chat</PageTitle>
+
+<MudLayout>
+    <MudAppBar Elevation="1">
+        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Inherit" Edge="Edge.Start"  OnClick="OnBack"/>
+        <MudText Typo="Typo.h6">@(chat?.name ?? "Loading...")</MudText>
+        <MudSpacer />
+    </MudAppBar>
+    <MudMainContent Style="bottom : 20px; height : auto; position : fixed;" Class="pt-16 px-16">
+        <div>
+            @{
+                var orderedMessages = messages
+                    .OrderBy(m => m.date)
+                    .ToList();
+
+
+                if (orderedMessages.Count > 0) {
+                    List<List<Message>> orderedGroups = [[orderedMessages[0]]];
+
+                    foreach (var message in orderedMessages.Skip(1)) {
+                        if (orderedGroups.Last().First().userId == message.userId) {
+                            orderedGroups.Last().Add(message);
+                        }else {
+                            orderedGroups.Add([message]);
+                        }
+                    }
+
+                    for (int i = 0; i < orderedGroups.Count; i++)
+                    {
+                        var group = orderedGroups[i];
+                        var frst = group.First().userId;
+                        var usrText = frst is null ? "Loading...." : GetUserText(frst);
+                        var position = usrText == "You" ? ChatBubblePosition.End : ChatBubblePosition.Start;
+
+                        <MudChat ChatPosition="@position">
+                            <MudChatHeader Name="@usrText"/>
+                            @foreach (var message in group.OrderBy(m => m.date))
+                            {
+                                <MudChatBubble>
+                                    @message.text
+                                </MudChatBubble>
+                            }
+                        </MudChat>
+                    }
+                }
+            }
+        </div>
+        <MudSpacer/>
+        <MudTextField Style="margin-top : 20px;" @ref="inputField" T="string" AutoGrow Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Send" OnAdornmentClick="OnSubmit" AdornmentAriaLabel="Submit" />
+    </MudMainContent>
+    
+</MudLayout>
+
+@code {
+    [Parameter]
+    public string chatId {get; set;}
+    private Chat? chat;
+    private List<Message> messages = [];
+    private MudTextField<string> inputField;
+    private HubConnection? hub;
+    private List<User> users = [];
+    private User current_user;
+
+    private string GetUserText(String userId) {
+        if (userId == current_user.id) {
+            return "You";
+        }  else if (users is null || users.Count <= 0) {
+            return "Loading...";
+        }
+        
+        else {
+            return users?.Where((x) => x.id == userId).First()?.username ?? "Loading...";
+        }
+    }
+
+    private async Task OnSubmit()
+    {
+        if (inputField.Value.Trim().Length <= 0) {
+            return;
+        }
+
+        var msg = new Message {
+            text = inputField.Value.Trim(),
+            parentId = chatId,
+            date = DateTime.Now,
+            userId = current_user.id
+        };
+
+        msg = await hub.InvokeAsync<Message>(nameof(IAppHubServer.SendMessage), msg);
+        messages.Add(msg);
+        await inputField.Clear();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        hub = hubService.GetHubConnection().Build();
+
+        hub.On<Message>(nameof(IAppHubClient.ReceiveMessage), (msg) => {
+            if (msg.id == chatId) {
+                messages.Add(msg);
+                StateHasChanged();
+            }
+        });
+
+        await hub.StartAsync();
+        
+        messages = await hub.InvokeAsync<List<Message>>(nameof(IAppHubServer.GetMessages), chatId);
+        await hub.SendAsync(nameof(IAppHubServer.ConnectToChat), chatId);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+        current_user = await sessionStorage.GetItemAsync<User>("user");
+        if (chat?.name is null || users is null) {
+            chat = await hub!.InvokeAsync<Chat>(nameof(IAppHubServer.GetChatWithName), chatId, current_user.id);
+            users = await hub!.InvokeAsync<List<User>>(nameof(IAppHubServer.GetUsers), chat.userIds);
+            StateHasChanged();
+        }
+    }
+
+    private void OnBack() {
+        navigationManager.NavigateTo("/dash");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hub is not null) {
+            await hub.DisposeAsync();
+        }
+    }
+}

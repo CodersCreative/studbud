@@ -1,0 +1,112 @@
+@page "/signup"
+@using System.Text.RegularExpressions
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.SignalR.Client
+@using studbud.Client.Shared
+@using studbud.Shared
+@using studbud.Shared.Models
+@using System.Threading.Tasks
+@inject NavigationManager navigationManager
+@inject HubService hubService
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@implements IAsyncDisposable
+
+<studbud.Client.Layout.DefaultLayout>
+    <div style="display: flex; justify-content: center;">
+        <MudPaper Class="pa-4" style="width : 600px; ">
+            <MudText Typo="Typo.h3">Sign Up</MudText>
+            <MudForm @bind-Errors="@errors" @onsubmit="OnSubmit" >
+                <MudTextField T="string" Label="Username" Required="true" RequiredError="User name is required!" @ref="usernameField" />
+                <MudTextField T="string" Label="Email" Required="true" RequiredError="Email is required!" @ref="emailField"
+                        Validation="@(new EmailAddressAttribute() {ErrorMessage = "The email address is invalid"})" />
+                <MudTextField T="string" Label="Password" HelperText="Choose a strong password" @ref="pwField1"
+                            InputType="InputType.Password"
+                            Validation="@(new Func<string, IEnumerable<string>>(PasswordStrength))" Required="true"
+                            RequiredError="Password is required!"/>
+                <MudTextField T="string"
+                            Label="Repeat Password" HelperText="Repeat the password" @ref="pwField2" InputType="InputType.Password"
+                            Validation="@(new Func<string, string>(PasswordMatch))"/>
+                <div style="display : flex; flex-wrap : nowrap;">
+                    <MudButton OnClick="OnLogin" Variant="Variant.Filled" Color="Color.Secondary" Class="ml-auto">Login</MudButton>
+                    <MudSpacer/>
+                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Register</MudButton>
+                </div>
+            </MudForm>
+        </MudPaper>
+    </div>
+</studbud.Client.Layout.DefaultLayout>
+
+@code {
+    private string[] errors = { };
+    private HubConnection? hub;
+    private MudTextField<string> usernameField;
+    private MudTextField<string> emailField;
+    private MudTextField<string> pwField1;
+    private MudTextField<string> pwField2;
+
+    private IEnumerable<string> PasswordStrength(string pw) {
+        if (string.IsNullOrWhiteSpace(pw)) {
+            yield return "Password is required!";
+            yield break;
+        }
+        if (pw.Length < 8)
+            yield return "Password must be at least of length 8";
+        if (!Regex.IsMatch(pw, @"[A-Z]"))
+            yield return "Password must contain at least one capital letter";
+        if (!Regex.IsMatch(pw, @"[a-z]"))
+            yield return "Password must contain at least one lowercase letter";
+        if (!Regex.IsMatch(pw, @"[0-9]"))
+            yield return "Password must contain at least one digit";
+    }
+
+    private string PasswordMatch(string arg) {
+        if (pwField1.Value != arg)
+            return "Passwords don't match";
+        return null;
+    }
+
+    protected override async Task OnInitializedAsync() {
+        await base.OnInitializedAsync();
+        
+
+        hub = hubService.GetHubConnection().Build();
+
+        await hub.StartAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        if (await hubService.AutoLogin(hub, sessionStorage) is not null) {
+            navigationManager.NavigateTo("/dash");
+            return;
+        }
+    }
+
+    private async Task OnSubmit() {
+        var user = await hub.InvokeAsync<User?>(nameof(IAppHubServer.SignUp), new UserInfo {
+            username = usernameField.Value.Trim(),
+            email = emailField.Value.Trim(),
+            password = pwField1.Value
+        });
+
+        if (user is not null) {
+            await sessionStorage.SetItemAsync("user", user);
+            navigationManager.NavigateTo("/dash");
+            StateHasChanged();
+        }
+    }
+
+
+    private void OnLogin() {
+        navigationManager.NavigateTo("/login");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hub is not null) {
+            await hub.DisposeAsync();
+        }
+    }
+}

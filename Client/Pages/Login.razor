@@ -1,0 +1,78 @@
+@page "/login"
+@using System.Text.RegularExpressions
+@using Microsoft.AspNetCore.SignalR.Client
+@using System.Text.Json
+@using studbud.Client.Shared
+@using studbud.Shared
+@using studbud.Shared.Models
+@using System.Threading.Tasks
+@inject NavigationManager navigationManager
+@inject HubService hubService
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@implements IAsyncDisposable
+
+<studbud.Client.Layout.DefaultLayout>
+    <div style="display: flex; justify-content: center;">
+        <MudPaper Class="pa-4" style="width : 600px; ">
+            <MudText Typo="Typo.h3">Login</MudText>
+            <MudForm @bind-Errors="@errors" >
+                <MudTextField T="string" Label="Username" Required="true" RequiredError="User name is required!" @ref="usernameField" />
+                <MudTextField T="string" Label="Password" HelperText="Choose a strong password" @ref="pwField1"
+                            InputType="InputType.Password"
+                            RequiredError="Password is required!"/>
+                <div style="display : flex; flex-wrap : nowrap;">
+                    <MudButton OnClick="OnSignup" Variant="Variant.Filled" Color="Color.Secondary" Class="ml-auto">Sign-up</MudButton>
+                    <MudSpacer/>
+                    <MudButton OnClick="OnSubmit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Login</MudButton>
+                </div>
+            </MudForm>
+        </MudPaper>
+    </div>
+</studbud.Client.Layout.DefaultLayout>
+
+@code {
+    private string[] errors = { };
+    private MudTextField<string> usernameField;
+    private HubConnection? hub;
+    private MudTextField<string> pwField1;
+
+    protected override async Task OnInitializedAsync() {
+        await base.OnInitializedAsync();
+        hub = hubService.GetHubConnection().Build();
+        await hub.StartAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+
+        await base.OnAfterRenderAsync(firstRender);
+        if (await hubService.AutoLogin(hub, sessionStorage) is not null) {
+            navigationManager.NavigateTo("/dash");
+        }
+    }
+
+    private async Task OnSubmit() {
+        if (usernameField.Value.Trim().Count() <= 0 || pwField1.Value.Trim().Count() <= 0) {
+            return;
+        }
+
+        var user = await hub.InvokeAsync<User?>(nameof(IAppHubServer.SignIn), usernameField.Value.Trim(), pwField1.Value);
+        if (user is not null) {
+            await sessionStorage.SetItemAsync("user", user);
+            navigationManager.NavigateTo("/dash");
+            StateHasChanged();
+        }
+    }
+
+    private void OnSignup() {
+        navigationManager.NavigateTo("/signup");
+    }
+
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hub is not null) {
+            await hub.DisposeAsync();
+        }
+    }
+}
