@@ -5,47 +5,52 @@
 @inject Blazored.SessionStorage.ISessionStorageService sessionStorage
 @inject NavigationManager navigationManager
 
-<MudPaper Class="pa-4 mb-4">
-    <div><b>Name:</b> @assignment?.name</div>
-    <div><b>Due:</b> @(assignment?.due?.ToString("g") ?? "—")</div>
-    <div class="mt-2">@assignment?.text</div>
-</MudPaper>
+<div><b>Name:</b> @assignment?.name</div>
+<div><b>Due:</b> @(assignment?.due?.ToString("g") ?? "—")</div>
+<MudMarkdown Value="@assignment?.text"/>
 
 @if (!isTeacher)
 {
-    <MudPaper Class="pa-4">
-        <MudText Typo="Typo.h6">Your Submission</MudText>
-        @if (yourSubmission is null)
-        {
-            <div>No submission yet</div>
-        }
-        else
-        {
-            <div>@yourSubmission.text</div>
-            <div class="text-muted">Submitted: @yourSubmission.date</div>
-        }
-    </MudPaper>
+    <MudText Typo="Typo.h6">Your Submission</MudText>
+    @if (yourSubmission is null)
+    {
+        <div>No submission yet</div>
+    }
+    else
+    {
+        <div>@yourSubmission.text</div>
+        <div class="text-muted">Submitted: @yourSubmission.date</div>
+    }
 }
 else
 {
-    <MudPaper Class="pa-4">
-        <MudText Typo="Typo.h6">Submissions</MudText>
-        @if (submissions is null || submissions.Count == 0)
-        {
-            <div>No submissions</div>
-        }
-        else
-        {
+    <MudText Typo="Typo.h6">Submissions</MudText>
+    @if (submissions is null || submissions.Count == 0)
+    {
+        <div>No submissions</div>
+    }
+    else
+    {
             @foreach (var s in submissions)
             {
                 <MudPaper Class="pa-2 mb-2">
-                    <div><b>@GetUserName(s.userId)</b></div>
-                    <div>@s.text</div>
-                    <div class="text-muted">@s.date</div>
+                    <div class="d-flex justify-space-between">
+                        <div>
+                            <div><b>@GetUserName(s.userId)</b></div>
+                            <MudMarkdown Value="@s.text"/>
+                            <div class="text-muted">@s.date</div>
+                        </div>
+                        <div style="min-width:160px;">
+                            <div><b>Mark:</b> @(s.mark?.ToString() ?? "—") / @(assignment?.maxMark?.ToString() ?? "—")</div>
+                            <div class="mt-2">
+                                <MudNumericField T="int?" @bind-Value="submissionMarks[s.id ?? string.Empty]" Placeholder="Set mark" />
+                                <MudButton OnClick="() => SaveMark(s)" Class="mt-1">Save</MudButton>
+                            </div>
+                        </div>
+                    </div>
                 </MudPaper>
             }
-        }
-    </MudPaper>
+    }
 }
 
 
@@ -62,11 +67,12 @@ else
     private User? current_user;
     private List<User> users = new();
     private bool isTeacher = false;
+    private Dictionary<string, int?> submissionMarks = new();
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-        var hub = hubService.GetHubConnection().Build();
+        hub = hubService.GetHubConnection().Build();
         await hub.StartAsync();
         if (classId is null || assignmentId is null) return;
 
@@ -79,14 +85,24 @@ else
         }
 
         var clss = await hub.InvokeAsync<Class>(nameof(IAppHubServer.GetClass), classId);
-        if (clss?.teacherIds is not null && current_user is not null)
+        isTeacher = false;
+        var tIds = clss?.teacherIds;
+        if (tIds is not null && current_user is not null)
         {
-            isTeacher = clss.teacherIds.Contains(current_user.id);
+            isTeacher = tIds.Contains(current_user.id ?? string.Empty);
         }
 
         if (clss?.userIds is not null)
         {
             users = await hub.InvokeAsync<List<User>>(nameof(IAppHubServer.GetUsers), clss.userIds);
+        }
+
+        // init submissionMarks dictionary
+        submissionMarks = new Dictionary<string, int?>();
+        foreach (var s in submissions)
+        {
+            var key = s.id ?? string.Empty;
+            submissionMarks[key] = s.mark;
         }
     }
 
@@ -97,5 +113,20 @@ else
     private string GetUserName(string? id)
     {
         return users.FirstOrDefault(u => u.id == id)?.username ?? id ?? "Unknown";
+    }
+
+    private async Task SaveMark(Submission s)
+    {
+        if (!isTeacher) return;
+        if (hub is null) return;
+        if (s.id is null) return;
+        var key = s.id;
+        var mark = submissionMarks.ContainsKey(key) ? submissionMarks[key] : null;
+        if (mark is null) return;
+        var updated = await hub.InvokeAsync<Submission>(nameof(IAppHubServer.SetSubmissionMark), s.id, (int)mark);
+        if (updated is not null)
+        {
+            s.mark = updated.mark;
+        }
     }
 }

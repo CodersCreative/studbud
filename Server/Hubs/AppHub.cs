@@ -4,6 +4,7 @@ using studbud.Shared.Models;
 using studbud.Shared;
 using System.Reactive.Threading.Tasks;
 using System.Text.Json;
+using SurrealDb.Net.Models;
 
 namespace studbud.Hubs;
 
@@ -88,9 +89,71 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
         return res!.ToBase();
     }
 
+    public async Task<Chat> AddUserToChat(string chatId, string userId)
+    {
+        RecordId id = ("chat", chatId);
+        await dbClient.Query($"UPDATE {id} SET userIds += {userId};");
+        var res = await dbClient.Select<DbChat>(("chat", chatId));
+        return res!.ToBase();
+    }
+
+    public async Task<Chat> SetChatName(string chatId, string name)
+    {
+        RecordId id = ("chat", chatId);
+        await dbClient.Query($"UPDATE {id} SET name = {name};");
+        var res = await dbClient.Select<DbChat>(("chat", chatId));
+        return res!.ToBase();
+    }
+
     public async Task<Class> GetClass(string id)
     {
         var res = await dbClient.Select<DbClass>(("class", id));
+        return res!.ToBase();
+    }
+
+    public async Task<Class> UpdateClassInfo(string classId, string? name, string? description)
+    {
+        var updates = new List<string>();
+        if (name is not null) updates.Add($"name = '{name}'");
+        if (description is not null) updates.Add($"description = '{description}'");
+        if (updates.Count > 0)
+        {
+            var upd = string.Join(", ", updates);
+            await dbClient.RawQuery($"UPDATE class:{classId} SET {upd};");
+        }
+        var res = await dbClient.Select<DbClass>(("class", classId));
+        return res!.ToBase();
+    }
+
+    public async Task<Class> AddStudentToClass(string classId, string userId)
+    {
+        RecordId id = ("class", classId);
+        await dbClient.Query($"UPDATE {id} SET userIds += {userId};");
+        var res = await dbClient.Select<DbClass>(("class", classId));
+        return res!.ToBase();
+    }
+
+    public async Task<Class> RemoveStudentFromClass(string classId, string userId)
+    {
+        RecordId id = ("class", classId);
+        await dbClient.Query($"UPDATE {id} SET userIds -= {userId};");
+        var res = await dbClient.Select<DbClass>(("class", classId));
+        return res!.ToBase();
+    }
+
+    public async Task<Class> AddPinnedLink(string classId, PinnedLink link)
+    {
+        RecordId id = ("class", classId);
+        await dbClient.Query($"UPDATE {id} SET pinnedLinks += {new { title = link.title, url = link.url, code = link.code ?? System.Guid.NewGuid().ToString() }};");
+        var res = await dbClient.Select<DbClass>(("class", classId));
+        return res!.ToBase();
+    }
+
+    public async Task<Class> RemovePinnedLink(string classId, string linkId)
+    {
+        RecordId id = ("class", classId);
+        await dbClient.Query($"UPDATE {id} SET pinnedLinks = array::filter(pinnedLinks, (v) -> v.id != {linkId});");
+        var res = await dbClient.Select<DbClass>(("class", classId));
         return res!.ToBase();
     }
 
@@ -113,8 +176,26 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
 
     public async Task<Submission> SubmitAssignment(Submission sub)
     {
-        var res = await dbClient.Create("submission", new DbSubmission(sub));
-        return res.ToBase();
+        if (sub.id is not null) {
+            DbSubmission result = await dbClient.Update(new DbSubmission(sub));
+            return result.ToBase();
+        } else {
+            var res = await dbClient.Create("submission", new DbSubmission(sub));
+            return res.ToBase();
+        }
+    }
+
+    public async Task<Submission> SetSubmissionMark(string submissionId, int mark)
+    {
+        RecordId id = ("submission", submissionId);
+        var result = await dbClient.Query($"UPDATE {id} SET mark = {mark};");
+        var arr = result.GetValue<List<DbSubmission>>(0);
+        if (arr is not null && arr.Count > 0) {
+            return arr.First().ToBase();
+        } else {
+            var sel = await dbClient.Select<DbSubmission>(("submission", submissionId));
+            return sel!.ToBase();
+        }
     }
 
     public async Task<List<Submission>> GetSubmissions(string assignmentId)
@@ -189,20 +270,33 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
 
     public async Task<string> GetChatNameInternal(Chat chat, string userId)
     {
-        if (chat.name is null) {
-            var other = chat.userIds.First();
-            if (other == userId) {
-                other = chat.userIds[1];
+        if (chat.name is null)
+        {
+            var other = chat.userIds?.FirstOrDefault();
+            if (other is null)
+            {
+                return userId;
+            }
+
+            if (other == userId)
+            {
+                if (chat.userIds is not null && chat.userIds.Count > 1)
+                {
+                    other = chat.userIds[1];
+                }
             }
 
             var res = await dbClient.Select<DbUser>(("user", other));
-            if (res is not null) {
-                return res.username;
-            }else
+            if (res is not null)
+            {
+                return res.username ?? other;
+            }
+            else
             {
                 return other;
             }
-        }else
+        }
+        else
         {
             return chat.name;
         }

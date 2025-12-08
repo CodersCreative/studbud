@@ -11,17 +11,45 @@
 
 <MudLayout>
 	<MudAppBar Elevation="1">
-		<MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Inherit" Edge="Edge.Start"  OnClick="OnBack"/>
-		<MudText Typo="Typo.h6">@(clss?.name ?? "Loading...")</MudText>
-		<MudSpacer />
+        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Inherit" Edge="Edge.Start"  OnClick="OnBack"/>
+        <MudText Typo="Typo.h6">@(clss?.name ?? "Loading...")</MudText>
+        <MudSpacer />
+        @if (isTeacher)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Inherit" Edge="Edge.End" OnClick="EditClassName" />
+        }
 	</MudAppBar>
     <MudMainContent Class="pt-16 px-16">
-        <MudTabs Rounded="true" Centered="true" Style="padding : 50px;">
+        <MudTabs Rounded="true" Centered="true" Style="padding : 50px;" @bind-ActivePanelIndex="activeTab">
             <MudTabPanel Text="Home">
                 <MudPaper Class="pa-4 mb-4">
                     <MudText Typo="Typo.h5">Class Info</MudText>
                     <MudDivider Class="my-2" />
-                    <div><b>Code:</b> @(clss?.code ?? "—")</div>
+                        <div><b>Code:</b> @(clss?.code ?? "—")</div>
+                        <div class="mt-2"><b>Description:</b></div>
+                        @if (!isTeacher && !string.IsNullOrWhiteSpace(clss?.description))
+                        {
+                            <MudMarkdown Value="@(clss?.description ?? "No description")"/>
+                        }
+                        @if (isTeacher)
+                        {
+                            @if (!editingClass)
+                            {
+                                <MudMarkdown Value="@(clss?.description ?? "—")"/>
+                                <div style="margin-top:8px;">
+                                    <MudButton Variant="Variant.Outlined" OnClick="EnableEditClass">Edit</MudButton>
+                                </div>
+                            }
+                            else
+                            {
+                                <MarkdownEditor @bind-Value="editDescription" />
+                                <MudTextField Label="Class Name:" @bind-Value="editName" />
+                                <div style="margin-top:8px; display:flex; gap:8px;">
+                                    <MudButton OnClick="SaveClassEdits" Color="Color.Primary">Save</MudButton>
+                                    <MudButton OnClick="CancelClassEdits" Variant="Variant.Outlined">Cancel</MudButton>
+                                </div>
+                            }
+                        }
                 </MudPaper>
 
                 <MudPaper Class="pa-4">
@@ -33,11 +61,57 @@
                     }
                     else
                     {
-                        <MudExpansionPanel Text="@(users.Count.ToString() + " members")" >
-                            @foreach (var u in users) {
-                                <div>@u.username</div>
+                            <MudExpansionPanel Text="@(users.Count.ToString() + " members")" >
+                                @foreach (var u in users) {
+                                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                                        <div>@u.username</div>
+                                        @if (isTeacher && u.id != current_user?.id)
+                                        {
+                                            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="() => KickUser(u.id)">Kick</MudButton>
+                                        }
+                                    </div>
+                                }
+                            </MudExpansionPanel>
+                            @if (isTeacher)
+                            {
+                                <div style="margin-top:8px; display:flex; gap:8px; align-items:center;">
+                                    <MudTextField Placeholder="username to add" @bind-Value="addUserName" />
+                                    <MudButton OnClick="AddUserToClass">Add</MudButton>
+                                </div>
                             }
-                        </MudExpansionPanel>
+                    }
+                </MudPaper>
+                <MudPaper Class="pa-4 mt-4">
+                    <MudText Typo="Typo.h6">Pinned Links</MudText>
+                    <MudDivider Class="my-2" />
+                    @if (clss?.pinnedLinks is null || clss.pinnedLinks.Count == 0)
+                    {
+                        <div>No links pinned</div>
+                    }
+                    else
+                    {
+                        @foreach (var l in clss.pinnedLinks)
+                        {
+                            <div class="d-flex justify-space-between pa-2" style="align-items:center; gap:8px;">
+                                <div>
+                                    <div><b>@(l.title ?? l.url)</b></div>
+                                    <div><a href="@(l.url ?? "#")" target="_blank">@(l.url)</a></div>
+                                </div>
+                                @if (isTeacher)
+                                {
+                                    <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="() => RemovePinnedLink(l.code)">Remove</MudButton>
+                                }
+                            </div>
+                        }
+                    }
+
+                    @if (isTeacher)
+                    {
+                        <div style="margin-top:8px; display:flex; gap:8px; align-items:center;">
+                            <MudTextField Placeholder="Link title" @bind-Value="newPinTitle" />
+                            <MudTextField Placeholder="https://..." @bind-Value="newPinUrl" />
+                            <MudButton OnClick="AddPinnedLink">Pin</MudButton>
+                        </div>
                     }
                 </MudPaper>
             </MudTabPanel>
@@ -46,7 +120,7 @@
                 {
                     foreach (var m in messages.OrderBy(m => m.date))
                     {
-                        <MudPaper Class="pa-2 ma-2">@GetUserText(m.userId): @m.text</MudPaper>
+                        <MudPaper Class="pa-2 ma-2"><div>@GetUserText(m.userId):</div> <MudMarkdown Value="@m.text"/></MudPaper>
                     }
                 }
                 <MudTextField Style="margin-top : 20px;" @ref="inputField" T="string" AutoGrow Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Send" OnAdornmentClick="OnSubmit" AdornmentAriaLabel="Submit" />
@@ -57,11 +131,12 @@
                         <AssignmentView classId="@classId" assignmentId="@viewing.id"/>
                         <MudButton OnClick="CloseAssignmentPopUp" Class="ml-auto mr-n3 mb-1" Color="Color.Error">Back</MudButton>
                     </MudPaper>
-                }else if (creating is not null){
+                }else if (creating is not null && isTeacher){
                     <MudPaper Class="pa-3 mb-2">
                         <MudTextField Style="margin : 10px;" Label="Name" @bind-Value="creating.name" />
                         <MudDatePicker Style="margin : 10px;" Label="Due (optional)" @bind-Date="creating.due"/>
-                        <MudTextField Style="margin : 10px;" Label="Description" Lines="8" @bind-Value="creating.text" />
+                        <MarkdownEditor @bind-Value="creating.text" />
+                        <MudNumericField T="int?" Style="margin : 10px;" Label="Max Mark (optional)" @bind-Value="creating.maxMark" />
                         <div style="display : flex; flex-wrap : nowrap; margin : 10px; margin-bottom : 20px;">
                             <MudButton OnClick="CloseAssignmentPopUp" Class="ml-auto mr-n3 mb-1" Color="Color.Error">Back</MudButton>
                             <MudSpacer/>
@@ -78,6 +153,13 @@
                     }
                     else
                     {
+                        if (isTeacher) {
+                            <div class="d-flex" style="gap:8px; margin-bottom:8px;">
+                                <MudSpacer />
+                                <MudButton OnClick="CreateAssignmentPopUp" Color="Color.Primary">Create</MudButton>
+                            </div>
+                        }
+
                         @foreach (var a in assignments)
                         {
                             <MudPaper Class="pa-3 mb-2">
@@ -86,11 +168,24 @@
                                         <b>@a.name</b>
                                         <div class="text-muted">Due: @(a.due?.ToString("g") ?? "No due date")</div>
                                     </div>
-                                    <div>
+                                    <div style="display:flex; gap:8px;">
                                         <MudButton Variant="Variant.Outlined" OnClick="() => ViewAssignmentPopUp(a)">View</MudButton>
+                                        @if (!isTeacher) {
+                                            <MudButton Variant="Variant.Text" OnClick="async () => await ToggleSubmit(a.id)">Submit</MudButton>
+                                        }
                                     </div>
                                 </div>
-                                <MudButton OnClick="CreateAssignmentPopUp" Class="ml-auto mr-n3 mb-1" Color="Color.Primary">Create</MudButton>
+
+                                @if (showSubmitFor == a.id)
+                                {
+                                    <div class="mt-2">
+                                        <MarkdownEditor @bind-Value="submissionText" Placeholder="Write your submission..."/>
+                                        <div style="display:flex; gap:8px; margin-top:8px;">
+                                            <MudButton OnClick="async () => await SubmitAssignment(a.id)" Variant="Variant.Filled" Color="Color.Primary">Send</MudButton>
+                                            <MudButton OnClick="async () => await ToggleSubmit(null)" Variant="Variant.Outlined">Cancel</MudButton>
+                                        </div>
+                                    </div>
+                                }
                             </MudPaper>
                         }
                     }
@@ -115,6 +210,14 @@
 	private string submissionText = string.Empty;
     private Assignment? viewing = null;
     private Assignment? creating = null;
+    private bool isTeacher = false;
+    private bool editingClass = false;
+    private string editName = string.Empty;
+    private string editDescription = string.Empty;
+    private int activeTab = 0;
+    private string addUserName = string.Empty;
+    private string newPinTitle = string.Empty;
+    private string newPinUrl = string.Empty;
 
     enum Page {
         Home,
@@ -137,6 +240,97 @@
         open = !open;
     } 
 
+    private void EnableEditClass()
+    {
+        editingClass = true;
+        editName = clss?.name ?? string.Empty;
+        editDescription = clss?.description ?? string.Empty;
+    }
+
+    private void EditClassName()
+    {
+        activeTab = 0;
+        EnableEditClass();
+    }
+
+    private void CancelClassEdits()
+    {
+        editingClass = false;
+        editName = string.Empty;
+        editDescription = string.Empty;
+    }
+
+    private async Task SaveClassEdits()
+    {
+        if (classId is null || hub is null) return;
+        var updated = await hub.InvokeAsync<Class>(nameof(IAppHubServer.UpdateClassInfo), classId, string.IsNullOrWhiteSpace(editName) ? null : editName, string.IsNullOrWhiteSpace(editDescription) ? null : editDescription);
+        if (updated is not null)
+        {
+            clss = updated;
+        }
+        editingClass = false;
+        StateHasChanged();
+    }
+
+    private async Task AddUserToClass()
+    {
+        if (string.IsNullOrWhiteSpace(addUserName) || hub is null || classId is null) return;
+        var usr = await hub.InvokeAsync<User?>(nameof(IAppHubServer.GetUserFromUsername), addUserName.Trim());
+        if (usr is null || usr.id is null) return;
+        var updated = await hub.InvokeAsync<Class>(nameof(IAppHubServer.AddStudentToClass), classId, usr.id);
+        if (updated is not null)
+        {
+            clss = updated;
+            if (clss?.userIds is not null)
+            {
+                users = await hub.InvokeAsync<List<User>>(nameof(IAppHubServer.GetUsers), clss.userIds);
+            }
+        }
+        addUserName = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task KickUser(string? userId)
+    {
+        if (string.IsNullOrWhiteSpace(userId) || hub is null || classId is null) return;
+        var updated = await hub.InvokeAsync<Class>(nameof(IAppHubServer.RemoveStudentFromClass), classId, userId);
+        if (updated is not null)
+        {
+            clss = updated;
+            if (clss?.userIds is not null)
+            {
+                users = await hub.InvokeAsync<List<User>>(nameof(IAppHubServer.GetUsers), clss.userIds);
+            }
+        }
+        StateHasChanged();
+    }
+
+    private async Task AddPinnedLink()
+    {
+        if (hub is null || classId is null) return;
+        if (string.IsNullOrWhiteSpace(newPinUrl)) return;
+        var link = new PinnedLink { code = System.Guid.NewGuid().ToString(), title = string.IsNullOrWhiteSpace(newPinTitle) ? newPinUrl : newPinTitle, url = newPinUrl };
+        var updated = await hub.InvokeAsync<Class>(nameof(IAppHubServer.AddPinnedLink), classId, link);
+        if (updated is not null)
+        {
+            clss = updated;
+        }
+        newPinTitle = string.Empty;
+        newPinUrl = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task RemovePinnedLink(string? linkId)
+    {
+        if (string.IsNullOrWhiteSpace(linkId) || hub is null || classId is null) return;
+        var updated = await hub.InvokeAsync<Class>(nameof(IAppHubServer.RemovePinnedLink), classId, linkId);
+        if (updated is not null)
+        {
+            clss = updated;
+        }
+        StateHasChanged();
+    }
+
 	private async Task OnSubmit()
 	{
 		if (inputField is null) return;
@@ -150,10 +344,6 @@
 	}
 
 	private void OnBack() => navigationManager.NavigateTo("/dash");
-
-    private void GotoAssignment(string assignment) {
-        navigationManager.NavigateTo($"/class/{classId}/assignments/{assignment}");
-    }
 
     private void CloseAssignmentPopUp() {
         viewing = null;
@@ -172,6 +362,7 @@
     private async Task CreateAssignment()
     {
         if (creating is null) return;
+        if (hub is null) return;
         var res = await hub.InvokeAsync<Assignment>(nameof(IAppHubServer.CreateAssignment), creating);
         if (res is not null) {
             assignments.Add(res);
@@ -215,23 +406,63 @@
 			{
 				users = await hub.InvokeAsync<List<User>>(nameof(IAppHubServer.GetUsers), clss.userIds);
 			}
+            isTeacher = false;
+            var tIds = clss?.teacherIds;
+            if (tIds is not null && current_user is not null)
+            {
+                isTeacher = tIds.Contains(current_user.id ?? string.Empty);
+            }
 			assignments = await hub.InvokeAsync<List<Assignment>>(nameof(IAppHubServer.GetAssignments), classId);
 			StateHasChanged();
 		}
 	}
 
-	private void ToggleSubmit(string? assignmentId)
-	{
-		if (showSubmitFor == assignmentId) showSubmitFor = null;
-		else showSubmitFor = assignmentId;
-	}
+    private async Task ToggleSubmit(string? assignmentId)
+    {
+        if (assignmentId is null)
+        {
+            showSubmitFor = null;
+            submissionText = string.Empty;
+            StateHasChanged();
+            return;
+        }
+
+        if (showSubmitFor == assignmentId)
+        {
+            showSubmitFor = null;
+            submissionText = string.Empty;
+            StateHasChanged();
+            return;
+        }
+
+        if (hub is null)
+        {
+            hub = hubService.GetHubConnection().Build();
+            await hub.StartAsync();
+        }
+
+        if (current_user is null)
+        {
+            current_user = await sessionStorage.GetItemAsync<User>("user");
+        }
+
+        submissionText = string.Empty;
+        var subs = await hub.InvokeAsync<List<Submission>>(nameof(IAppHubServer.GetSubmissions), assignmentId);
+        var existing = subs?.FirstOrDefault(s => s.userId == current_user?.id);
+        submissionText = existing?.text ?? string.Empty;
+        showSubmitFor = assignmentId;
+        StateHasChanged();
+    }
 
 	private async Task SubmitAssignment(string? assignmentId)
 	{
 		if (assignmentId is null) return;
 		if (current_user is null || hub is null) return;
-		var sub = new Submission { assignmentId = assignmentId, userId = current_user.id, date = DateTime.Now, text = submissionText };
-		var res = await hub.InvokeAsync<Submission>(nameof(IAppHubServer.SubmitAssignment), sub);
+        // check existing submissions for this assignment and current user
+        var subs = await hub.InvokeAsync<List<Submission>>(nameof(IAppHubServer.GetSubmissions), assignmentId);
+        var existing = subs?.FirstOrDefault(s => s.userId == current_user.id);
+        var sub = new Submission { id = existing?.id, assignmentId = assignmentId, userId = current_user.id, date = DateTime.Now, text = submissionText };
+        var res = await hub.InvokeAsync<Submission>(nameof(IAppHubServer.SubmitAssignment), sub);
 		submissionText = string.Empty;
 		showSubmitFor = null;
 	}

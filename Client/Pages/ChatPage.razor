@@ -16,7 +16,29 @@
         <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Color="Color.Inherit" Edge="Edge.Start"  OnClick="OnBack"/>
         <MudText Typo="Typo.h6">@(chat?.name ?? "Loading...")</MudText>
         <MudSpacer />
+        <MudIconButton Icon="@Icons.Material.Filled.PersonAdd" Color="Color.Inherit" Edge="Edge.End" OnClick="()=> showAddUserPanel = !showAddUserPanel" />
+        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Inherit" Edge="Edge.End" OnClick="()=> showRenamePanel = !showRenamePanel" />
     </MudAppBar>
+    @if (showAddUserPanel)
+    {
+        <div style="padding:8px 16px;">
+            <MudPaper Class="pa-2" Style="display:flex; gap:8px; align-items:center;">
+                <MudTextField Placeholder="username" @bind-Value="addUsername" />
+                <MudButton OnClick="AddUser">Add</MudButton>
+                <MudButton Variant="Variant.Text" OnClick="(()=> showAddUserPanel = false)">Cancel</MudButton>
+            </MudPaper>
+        </div>
+    }
+    @if (showRenamePanel)
+    {
+        <div style="padding:8px 16px;">
+            <MudPaper Class="pa-2" Style="display:flex; gap:8px; align-items:center;">
+                <MudTextField Placeholder="Chat name" @bind-Value="newChatName" />
+                <MudButton OnClick="RenameChat">Save</MudButton>
+                <MudButton Variant="Variant.Text" OnClick="(()=> showRenamePanel = false)">Cancel</MudButton>
+            </MudPaper>
+        </div>
+    }
     <MudMainContent Class="pt-16 px-16">
         <div>
             @{
@@ -48,7 +70,7 @@
                             @foreach (var message in group.OrderBy(m => m.date))
                             {
                                 <MudChatBubble>
-                                    @message.text
+                                    <MudMarkdown Value="@message.text"/>
                                 </MudChatBubble>
                             }
                         </MudChat>
@@ -64,16 +86,20 @@
 
 @code {
     [Parameter]
-    public string chatId {get; set;}
+    public string? chatId {get; set;}
     private Chat? chat;
-    private List<Message> messages = [];
-    private MudTextField<string> inputField;
+    private List<Message> messages = new();
+    private MudTextField<string>? inputField;
     private HubConnection? hub;
-    private List<User> users = [];
-    private User current_user;
+    private List<User> users = new();
+    private User? current_user;
+    private bool showAddUserPanel = false;
+    private bool showRenamePanel = false;
+    private string addUsername = string.Empty;
+    private string newChatName = string.Empty;
 
     private string GetUserText(String userId) {
-        if (userId == current_user.id) {
+        if (current_user is not null && userId == current_user.id) {
             return "You";
         }  else if (users is null || users.Count <= 0) {
             return "Loading...";
@@ -86,9 +112,9 @@
 
     private async Task OnSubmit()
     {
-        if (inputField.Value.Trim().Length <= 0) {
-            return;
-        }
+        if (inputField is null) return;
+        if (string.IsNullOrWhiteSpace(inputField.Value)) return;
+        if (hub is null || current_user is null || chatId is null) return;
 
         var msg = new Message {
             text = inputField.Value.Trim(),
@@ -134,6 +160,44 @@
 
     private void OnBack() {
         navigationManager.NavigateTo("/dash");
+    }
+
+    private async Task AddUser()
+    {
+        if (string.IsNullOrWhiteSpace(addUsername)) return;
+        if (hub is null || chatId is null) return;
+
+        var usr = await hub.InvokeAsync<User?>(nameof(IAppHubServer.GetUserFromUsername), addUsername.Trim());
+        if (usr is null || usr.id is null) return;
+
+        if (users.Contains(usr)) {
+            addUsername = "";
+            return;
+        }
+
+
+
+        var updated = await hub.InvokeAsync<Chat>(nameof(IAppHubServer.AddUserToChat), chatId, usr.id);
+        chat = updated;
+        if (chat?.userIds is not null)
+        {
+            users = await hub.InvokeAsync<List<User>>(nameof(IAppHubServer.GetUsers), chat.userIds);
+        }
+        addUsername = string.Empty;
+        showAddUserPanel = false;
+        StateHasChanged();
+    }
+
+    private async Task RenameChat()
+    {
+        if (string.IsNullOrWhiteSpace(newChatName)) return;
+        if (hub is null || chatId is null) return;
+
+        var updated = await hub.InvokeAsync<Chat>(nameof(IAppHubServer.SetChatName), chatId, newChatName.Trim());
+        chat = updated;
+        newChatName = string.Empty;
+        showRenamePanel = false;
+        StateHasChanged();
     }
 
     public async ValueTask DisposeAsync()
