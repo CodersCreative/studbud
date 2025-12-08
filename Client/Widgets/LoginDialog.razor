@@ -1,37 +1,34 @@
-@page "/login"
-@using System.Text.RegularExpressions
-@using Microsoft.AspNetCore.SignalR.Client
-@using System.Text.Json
+﻿@using Microsoft.AspNetCore.SignalR.Client
 @using studbud.Client.Shared
-@using studbud.Shared
 @using studbud.Shared.Models
-@using System.Threading.Tasks
+@inject IDialogService Dialog
+
+@inject ISnackbar Snackbar
 @inject NavigationManager navigationManager
 @inject HubService hubService
 @inject Blazored.SessionStorage.ISessionStorageService sessionStorage
 @implements IAsyncDisposable
 
-<studbud.Client.Layout.DefaultLayout>
-    <div style="display: flex; justify-content: center;">
-        <MudPaper Class="pa-4" style="width : 600px; ">
-            <MudText Typo="Typo.h3">Login</MudText>
-            <MudForm @bind-Errors="@errors" >
-                <MudTextField T="string" Label="Username" Required="true" RequiredError="User name is required!" @ref="usernameField" />
-                <MudTextField T="string" Label="Password" HelperText="Choose a strong password" @ref="pwField1"
+<MudDialog Style="background-color: transparent; box-shadow: none;">
+
+   <DialogContent>
+    <MudCard Style="width:400px; padding:24px; border-radius:16px;" Elevation="4">
+        <MudText Typo="Typo.h5" Class="mb-4">Login</MudText>
+        <MudTextField T="string" Label="Username" HelperText="Username" Required="true" RequiredError="User name is required!" @ref="usernameField" Variant="Variant.Outlined" />
+        <MudTextField T="string" Label="Password"  HelperText="Choose a strong password" @ref="pwField1"
+                            Required="true"
                             InputType="InputType.Password"
-                            RequiredError="Password is required!"/>
-                <div style="display : flex; flex-wrap : nowrap;">
-                    <MudButton OnClick="OnSignup" Variant="Variant.Filled" Color="Color.Secondary" Class="ml-auto">Sign-up</MudButton>
-                    <MudSpacer/>
-                    <MudButton OnClick="OnSubmit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Login</MudButton>
-                </div>
-            </MudForm>
-        </MudPaper>
-    </div>
-</studbud.Client.Layout.DefaultLayout>
+                            RequiredError="Password is required!" Variant="Variant.Outlined" />
+        <MudStack Row="true" Spacing="2" Justify="Justify.FlexEnd" Class="mt-11">
+            <MudButton Variant="Variant.Filled" OnClick="OnSubmit" Color="Color.Primary" FullWidth="true" >Login</MudButton>
+            <MudButton Variant="Variant.Outlined" OnClick="OnSignup" Color="Color.Warning" FullWidth="true" >Sign-Up</MudButton>
+        </MudStack>
+    </MudCard>
+   </DialogContent>
+
+</MudDialog>
 
 @code {
-    private string[] errors = { };
     private MudTextField<string> usernameField;
     private HubConnection? hub;
     private MudTextField<string> pwField1;
@@ -64,8 +61,12 @@
         }
     }
 
-    private void OnSignup() {
-        navigationManager.NavigateTo("/signup");
+    private Task OnSignup() {
+        return Dialog.ShowAsync<SignupDialog>("",new DialogOptions()
+        {
+
+            CloseOnEscapeKey = true 
+        });
     }
 
 

@@ -117,7 +117,6 @@
         var qz = new Quiz { name = quiz.name, userId = current_user?.id };
         var res = await hub.InvokeAsync<Quiz>(nameof(IAppHubServer.CreateQuiz), qz);
         if (res is null) return;
-        // create questions
         foreach (var q in questions)
         {
             q.quizId = res.id;
@@ -129,18 +128,14 @@
     private async Task SubmitQuizAnswers()
     {
         if (hub is null || quiz is null || current_user is null) return;
-        // try to find existing submission
         var subs = await hub.InvokeAsync<List<QuizSubmission>>(nameof(IAppHubServer.GetQuizSubmissions), quiz.id);
         var existing = subs?.FirstOrDefault(s => s.userId == current_user.id);
-        // ensure selectedAnswers length
         if (selectedAnswers.Count < questions.Count)
         {
-            // pad
             for (int i = selectedAnswers.Count; i < questions.Count; i++) selectedAnswers.Add(null);
         }
         var sub = new QuizSubmission { id = existing?.id, quizId = quiz.id, userId = current_user.id, answers = selectedAnswers, date = DateTime.Now };
         var saved = await hub.InvokeAsync<QuizSubmission>(nameof(IAppHubServer.SubmitQuiz), sub);
-        // refresh submissions
         submissions = await hub.InvokeAsync<List<QuizSubmission>>(nameof(IAppHubServer.GetQuizSubmissions), quiz.id);
     }
 

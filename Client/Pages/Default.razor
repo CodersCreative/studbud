@@ -1,4 +1,6 @@
 ﻿@page "/"
+@using studbud.Client.Widgets
+@inject IDialogService Dialog
 
 <PageTitle>Home</PageTitle>
 
@@ -33,10 +35,10 @@
             </MudStack>
 
             <MudStack Row="true" Spacing="2" Class="ml-6 mt-11" Justify="Justify.FlexStart">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/login">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenLoginDialog">
                     Login
                 </MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="/signup">
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="OpenSignupDialog">
                     Register
                 </MudButton>
             </MudStack>
@@ -134,3 +136,22 @@
 
     </MudText>
 </studbud.Client.Layout.DefaultLayout>
+
+@code {
+    private Task OpenLoginDialog()
+    {
+        return Dialog.ShowAsync<LoginDialog>("",new DialogOptions()
+        {
+
+            CloseOnEscapeKey = true 
+        });
+    }
+    private Task OpenSignupDialog()
+    {
+        return Dialog.ShowAsync<SignupDialog>("",new DialogOptions()
+        {
+
+            CloseOnEscapeKey = true 
+        });
+    }
+}

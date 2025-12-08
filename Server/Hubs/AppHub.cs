@@ -240,6 +240,28 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
 
     public async Task<QuizSubmission> SubmitQuiz(QuizSubmission sub)
     {
+        int score = 0;
+        if (sub.quizId is not null) {
+            var qres = await dbClient.Query($"SELECT * FROM question WHERE quizId = {sub.quizId} ORDER BY id ASC;");
+            var qarr = qres.GetValue<List<DbQuestion>>(0);
+            if (qarr is not null && sub.answers is not null) {
+                var questions = qarr.Select(x => x.ToBase()).ToList();
+                for (int i = 0; i < questions.Count && i < sub.answers.Count; i++) {
+                    var q = questions[i];
+                    int? correctIndex = null;
+                    if (q.answers is not null) {
+                        for (int ai = 0; ai < q.answers.Count; ai++) {
+                            var ans = q.answers[ai];
+                            if (ans is not null && ans.isCorrect == true) { correctIndex = ai; break; }
+                        }
+                    }
+                    var given = sub.answers[i];
+                    if (correctIndex is not null && given is not null && correctIndex == given) score++;
+                }
+            }
+        }
+        sub.score = score;
+
         if (sub.id is not null) {
             var updated = await dbClient.Update(new DbQuizSubmission(sub));
             return updated.ToBase();

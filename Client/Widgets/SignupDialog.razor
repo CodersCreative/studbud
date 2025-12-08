@@ -1,43 +1,41 @@
-@page "/signup"
+﻿@using Microsoft.AspNetCore.SignalR.Client
 @using System.Text.RegularExpressions
 @using System.ComponentModel.DataAnnotations
-@using Microsoft.AspNetCore.SignalR.Client
 @using studbud.Client.Shared
-@using studbud.Shared
 @using studbud.Shared.Models
-@using System.Threading.Tasks
+@inject IDialogService Dialog
+
+@inject ISnackbar Snackbar
 @inject NavigationManager navigationManager
 @inject HubService hubService
 @inject Blazored.SessionStorage.ISessionStorageService sessionStorage
 @implements IAsyncDisposable
 
-<studbud.Client.Layout.DefaultLayout>
-    <div style="display: flex; justify-content: center;">
-        <MudPaper Class="pa-4" style="width : 600px; ">
-            <MudText Typo="Typo.h3">Sign Up</MudText>
-            <MudForm @bind-Errors="@errors" @onsubmit="OnSubmit" >
-                <MudTextField T="string" Label="Username" Required="true" RequiredError="User name is required!" @ref="usernameField" />
-                <MudTextField T="string" Label="Email" Required="true" RequiredError="Email is required!" @ref="emailField"
-                        Validation="@(new EmailAddressAttribute() {ErrorMessage = "The email address is invalid"})" />
-                <MudTextField T="string" Label="Password" HelperText="Choose a strong password" @ref="pwField1"
-                            InputType="InputType.Password"
+<MudDialog Style="background-color: transparent; box-shadow: none;">
+
+   <DialogContent>
+    <MudCard Style="width:400px; padding:24px; border-radius:16px;" Elevation="4">
+        <MudText Typo="Typo.h5" Class="mb-4">Sign-Up</MudText>
+        <MudTextField T="string" Label="Username" HelperText="Username" Required="true" RequiredError="User name is required!" @ref="usernameField" Variant="Variant.Outlined" />
+        <MudTextField T="string" Label="Email" Validation="@(new EmailAddressAttribute() {ErrorMessage = "The email address is invalid"})" HelperText="Email" Required="true" RequiredError="Email is required!" @ref="emailField" Variant="Variant.Outlined" />
+        <MudTextField T="string" Label="Password"  HelperText="Choose a strong password" @ref="pwField1"
                             Validation="@(new Func<string, IEnumerable<string>>(PasswordStrength))" Required="true"
-                            RequiredError="Password is required!"/>
-                <MudTextField T="string"
-                            Label="Repeat Password" HelperText="Repeat the password" @ref="pwField2" InputType="InputType.Password"
-                            Validation="@(new Func<string, string>(PasswordMatch))"/>
-                <div style="display : flex; flex-wrap : nowrap;">
-                    <MudButton OnClick="OnLogin" Variant="Variant.Filled" Color="Color.Secondary" Class="ml-auto">Login</MudButton>
-                    <MudSpacer/>
-                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Register</MudButton>
-                </div>
-            </MudForm>
-        </MudPaper>
-    </div>
-</studbud.Client.Layout.DefaultLayout>
+                            InputType="InputType.Password"
+                            RequiredError="Password is required!" Variant="Variant.Outlined" />
+        <MudTextField T="string" Label="Password"  HelperText="Choose a strong password" @ref="pwField2"
+                            Validation="@(new Func<string, string>(PasswordMatch))"
+                            InputType="InputType.Password"
+                            RequiredError="Password is required!" Variant="Variant.Outlined" />
+        <MudStack Row="true" Spacing="2" Justify="Justify.FlexEnd" Class="mt-11">
+            <MudButton Variant="Variant.Filled" OnClick="OnSubmit" Color="Color.Primary" FullWidth="true" >Sign-Up</MudButton>
+            <MudButton Variant="Variant.Outlined" OnClick="OnLogin" Color="Color.Warning" FullWidth="true" >Login</MudButton>
+        </MudStack>
+    </MudCard>
+   </DialogContent>
+
+</MudDialog>
 
 @code {
-    private string[] errors = { };
     private HubConnection? hub;
     private MudTextField<string> usernameField;
     private MudTextField<string> emailField;
@@ -99,8 +97,12 @@
     }
 
 
-    private void OnLogin() {
-        navigationManager.NavigateTo("/login");
+    private Task OnLogin() {
+        return Dialog.ShowAsync<LoginDialog>("",new DialogOptions()
+        {
+
+            CloseOnEscapeKey = true 
+        });
     }
 
     public async ValueTask DisposeAsync()

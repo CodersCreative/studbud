@@ -1,4 +1,6 @@
 @using MudBlazor
+@using studbud.Client.Widgets
+@inject IDialogService Dialog
 
 <MudLayout Class="no-x-overflow">
     <MudAppBar Elevation="0">
@@ -16,7 +18,7 @@
         <MudSpacer />
 
         @* Right-side buttons *@
-        <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/login">Login</MudButton>
+        <MudButton Variant="Variant.Text" Color="Color.Inherit" OnClick="OpenLoginDialog">Login</MudButton>
         <MudIconButton Icon="@Icons.Material.Filled.DarkMode" />
 
     </MudAppBar>
@@ -89,5 +91,14 @@
         true => Icons.Material.Rounded.AutoMode,
         false => Icons.Material.Outlined.DarkMode,
     };
+
+    private Task OpenLoginDialog()
+    {
+        return Dialog.ShowAsync<LoginDialog>("",new DialogOptions()
+        {
+
+            CloseOnEscapeKey = true 
+        });
+    }
 }
 
