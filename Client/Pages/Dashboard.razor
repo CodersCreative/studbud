@@ -25,13 +25,16 @@
         <MudPaper Class="rounded-xl pa-6 mx-auto" Style="border-radius: 20px 0 0 0; width:100%; height:100%; padding : 20px;">
             @switch (page) {
                 case Page.Home:
-                    <studbud.Client.Pages.DashboardPages.Default OnOpenChat="(x) => {chat = x; SwitchPage(Page.Chat);}" OnOpenClass="(x) => {clss = x; SwitchPage(Page.Class);}" />
+                    <studbud.Client.Pages.DashboardPages.Default OnOpenChat="(x) => {chat = x; SwitchPage(Page.Chat);}" OnOpenQuiz="(x) => {quiz = x; SwitchPage(Page.Quiz);}" OnCreateQuiz="() => {quiz = null; editingQuiz=true; SwitchPage(Page.Quiz);}" OnOpenClass="(x) => {clss = x; SwitchPage(Page.Class);}" />
                     break;
                 case Page.Chat:
                     <studbud.Client.Pages.DashboardPages.ChatPage chat="chat" OnChatChanged="(x) => {chat = x; StateHasChanged();}"/>
                     break;
                 case Page.Class:
                     <studbud.Client.Pages.DashboardPages.ClassPage clss="clss" OnClassChanged="(x) => {clss = x; StateHasChanged();}"/>
+                    break;
+                case Page.Quiz:
+                    <studbud.Client.Pages.DashboardPages.QuizPage quiz="quiz" editing="@(editingQuiz ?? false)" OnQuizChanged="(x, y) => {quiz = x; editingQuiz = y; StateHasChanged();}"/>
                     break;
             }
         </MudPaper>
@@ -53,6 +56,7 @@
     private Class? clss;
     private Chat? chat;
     private Quiz? quiz;
+    private bool? editingQuiz;
 
     enum Page {
         Home,

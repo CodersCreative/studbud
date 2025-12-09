@@ -22,17 +22,17 @@
 
             <!-- Top Section: Contacts List (flex-grow-1 pushes bottom card down) -->
             <div class="flex-grow-1 overflow-y-auto pr-2">
-                <MudText Typo="Typo.h6" Class="mb-2" Style="font-weight:bold;">Classes</MudText>
+                <MudText Typo="Typo.h6" Class="mb-2" Style="font-weight:bold;">My Quizzes</MudText>
 
-                @foreach (var c in classes)
+                @foreach (var q in quizzes)
                 {
 
-                    <MudCard Class="@(c.id == clss?.id ? "mb-2 elevation-4" : "mb-2 elevation-0 transparent-card")" Style="border-radius:12px">
+                    <MudCard Class="@(q.id == quiz?.id ? "mb-2 elevation-4" : "mb-2 elevation-0 transparent-card")" Style="border-radius:12px">
                         <MudButton Variant="Variant.Text"
-                                    Color="@(c.id == clss?.id ? Color.Primary : Color.Default)"
-                                    OnClick="@(()=>LoadClass(c.id))"
+                                    Color="@(q.id == quiz?.id ? Color.Primary : Color.Default)"
+                                    OnClick="@(()=> {editing = true; LoadQuiz(q.id);})"
                                     Style="width:100%; text-align:left; margin-bottom:8px; align-items:center; justify-content:flex-start; justify-items:center; align-content:center;">
-                            @c.name
+                            @q.name
                         </MudButton>
                     </MudCard>
                 }
@@ -45,8 +45,10 @@
                 <MudSpacer></MudSpacer>
 
                 <br />
-
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Style="border-radius:15px" Size="Size.Small" OnClick="OnCreateClass" FullWidth="true">New Class</MudButton>
+                <MudStack Row="true">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Style="border-radius:15px" Size="Size.Small" OnClick="OnCreateQuiz" FullWidth="true">New Quiz</MudButton>
+                    <MudIconButton Icon="@Icons.Material.Filled.Search" Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small" OnClick="OnFindQuiz"/>
+                </MudStack>
             </MudCard>
             <!-- End of Bottom Section -->
 
@@ -54,11 +56,11 @@
     </MudItem>
 
     <MudItem xs="12" md="10">
-        @if (clss is not null) {
-            <ClassView clss="@clss"/>
+        @if (quiz is not null) {
+            <!-- <ClassView clss="@clss"/> -->
         }else{
             <MudText Typo="Typo.h6" Class="mb-2">
-                Select a class
+                Select a quiz
             </MudText>      
         }
     </MudItem>
@@ -68,11 +70,13 @@
 
 @code {
     [Parameter]
-    public Action<Class?> OnClassChanged {get; set;} = (x) => {};
+    public Action<Quiz?, bool> OnQuizChanged {get; set;} = (x, y) => {};
     [Parameter]
-    public Class? clss {get; set;}
+    public bool editing {get; set;} = false;
+    [Parameter]
+    public Quiz? quiz {get; set;}
     private HubConnection? hub;
-    private List<Class> classes = new();
+    private List<Quiz> quizzes = new();
     private User? current_user;
 
 
@@ -84,23 +88,31 @@
         await hub.StartAsync();
     }
 
-    private async Task LoadClass(string classId, bool bypass = false) {
-        if (classId == clss?.id && !bypass) {
-            clss = null;
-            OnClassChanged(null);
+    private async Task LoadQuiz(string quizId, bool bypass = false) {
+        if (quizId == quiz?.id && !bypass) {
+            quiz = null;
+            OnQuizChanged(null, false);
             return;
         }
-        clss = await hub!.InvokeAsync<Class>(nameof(IAppHubServer.GetClass), classId);
-        OnClassChanged(clss);
+        quiz = await hub!.InvokeAsync<Quiz>(nameof(IAppHubServer.GetQuiz), quizId);
+        OnQuizChanged(quiz, editing);
         StateHasChanged();
     }
 
-    private Task OnCreateClass()
+    private async Task OnCreateQuiz()
     {
-        return Dialog.ShowAsync<CreateClassDialog>("", new DialogParameters() {
-            ["OnClassAdded"] = (Class? clss) => {
-                if (clss is not null) {
-                    classes.Add(clss);
+        quiz = await hub!.InvokeAsync<Quiz>(nameof(IAppHubServer.CreateQuiz), new Quiz {name = "New Quiz", code = new Random().Next(999999).ToString(),description = "",userId = current_user.id});
+        quizzes.Add(quiz);
+        editing = true;
+    }
+
+    private Task OnFindQuiz()
+    {
+        return Dialog.ShowAsync<SearchQuizDialog>("", new DialogParameters() {
+            ["OnQuizOpened"] = (Quiz? q) => {
+                if (q is not null) {
+                    quiz = q;
+                    editing = false;
                 }
                 StateHasChanged();
             }
@@ -109,6 +121,7 @@
 
             CloseOnEscapeKey = true 
         });
+
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -116,10 +129,12 @@
         await base.OnAfterRenderAsync(firstRender);
         if (current_user is null) {
             current_user = await sessionStorage.GetItemAsync<User>("user");
-            classes = await hub.InvokeAsync<List<Class>>(nameof(IAppHubServer.GetClassesFromUser), current_user.id);
+            quizzes = await hub.InvokeAsync<List<Quiz>>(nameof(IAppHubServer.GetQuizzesFromUser), current_user.id);
 
-            if (clss is not null) {
-                await LoadClass(clss.id, true);
+            if (quiz is not null) {
+                await LoadQuiz(quiz.id, true);
+            } else if (editing) {
+                await OnCreateQuiz();
             }
             StateHasChanged();
         }

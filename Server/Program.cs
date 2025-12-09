@@ -107,6 +107,16 @@ DEFINE FIELD IF NOT EXISTS assignmentId ON TABLE submission TYPE string;
 DEFINE FIELD IF NOT EXISTS text ON TABLE submission TYPE string;
 DEFINE FIELD IF NOT EXISTS userId ON TABLE submission TYPE string;
 
+DEFINE TABLE IF NOT EXISTS quiz SCHEMALESS;
+DEFINE FIELD IF NOT EXISTS name ON TABLE quiz TYPE string;
+DEFINE FIELD IF NOT EXISTS description ON TABLE quiz TYPE string;
+DEFINE FIELD IF NOT EXISTS userId ON TABLE quiz TYPE string;
+DEFINE FIELD IF NOT EXISTS code ON TABLE quiz TYPE string;
+
+DEFINE ANALYZER quiz_analyzer TOKENIZERS class, blank FILTERS lowercase, ascii;
+DEFINE INDEX name_index ON TABLE quiz COLUMNS name SEARCH ANALYZER quiz_analyzer BM25;
+DEFINE INDEX desc_index ON TABLE quiz COLUMNS description SEARCH ANALYZER quiz_analyzer BM25;
+DEFINE INDEX code_index ON TABLE quiz COLUMNS code SEARCH ANALYZER quiz_analyzer BM25;
 """);
 }
 

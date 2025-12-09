@@ -130,6 +130,17 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
         return models.Select((x) => x.Name)?.ToList();
     }
 
+    private (string, string?) SplitThink(String text) {
+        if (!(text.Contains("<think>") && text.Contains("</think>"))) return (text, null);
+
+        var split = text.Split("<think>");
+
+        var content = split[0];
+        split = split[1].Split("</think>");
+        content += split[1];
+        return (content, split[0]);
+    }
+
     public async Task<Message?> GetAIResponse(string model, List<Message> messages)
     {
         if (!await IsAIAvailable())
@@ -141,7 +152,7 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
         chat.Model = model;
         var message = messages.Last();
         messages.RemoveAt(messages.Count - 1);
-        chat.Messages = messages.Select((x) => new OllamaSharp.Models.Chat.Message(x.userId == "AI" ? OllamaSharp.Models.Chat.ChatRole.Assistant : OllamaSharp.Models.Chat.ChatRole.User, x.text ?? "")).ToList();
+        chat.Messages = messages.Select((x) => new OllamaSharp.Models.Chat.Message(x.userId == "AI" ? OllamaSharp.Models.Chat.ChatRole.Assistant : OllamaSharp.Models.Chat.ChatRole.User, SplitThink(x.text ?? "").Item1)).ToList();
         
         var res = "";
         await foreach (var txt in chat.SendAsync(message.text ?? ""))
@@ -375,6 +386,30 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
             }
             return chts;
         }else
+        {
+            return [];
+        }
+    }
+
+    public async Task<List<Quiz>> GetQuizzesFromUser(string id)
+    {
+        var result = await dbClient.Query($"SELECT * FROM quiz WHERE userId = {id};");
+        var classes = result.GetValue<List<DbQuiz>>(0);
+        if (classes is not null) {
+            return classes.Select((x) => x.ToBase()).ToList();
+        } else
+        {
+            return [];
+        }
+    }
+
+    public async Task<List<Quiz>> SearchQuizzes(string search)
+    {
+        var result = await dbClient.Query($"SELECT *, search::score(1) + search::score(2) + search::score(3) * 1.5 AS score FROM quiz WHERE name @1@ {search} or description @2@ {search} or code @3@ {search} ORDER BY score DESC;");
+        var classes = result.GetValue<List<DbQuiz>>(0);
+        if (classes is not null) {
+            return classes.Select((x) => x.ToBase()).ToList();
+        } else
         {
             return [];
         }

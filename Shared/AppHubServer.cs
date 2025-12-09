@@ -41,6 +41,8 @@ public interface IAppHubServer
     Task<Submission> SetSubmissionMark(string submissionId, int mark);
     Task<List<Class>> GetClassesFromUser(string id);
     Task<List<Chat>> GetChatsFromUser(string id);
+    Task<List<Quiz>> GetQuizzesFromUser(string id);
+    Task<List<Quiz>> SearchQuizzes(string search);
     Task<Chat> GetChatWithName(string chatId, string userId);
     Task<User> GetUser(string id);
     Task<User?> CheckUser(string id);
