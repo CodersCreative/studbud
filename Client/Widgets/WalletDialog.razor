@@ -12,27 +12,28 @@
 <MudDialog Style="background-color: transparent; box-shadow: none;">
    <DialogContent>
         <MudCard Style="width:400px; padding:24px; border-radius:16px;" Elevation="4">
-            <MudText Typo="Typo.h5" Class="mb-4">Create Class</MudText>
-            <MudTextField T="string" Label="Code" HelperText="Class Code" @ref="codeField" />
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;" OnClick="OnJoinClass">Join</MudButton>
+            <MudText Typo="Typo.h5" Class="mb-4">Your Wallet</MudText>
+            <MudTextField T="float" Label="Code" HelperText="Class Code" @ref="moneyField" />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;" OnClick="OnAddMoney">Join</MudButton>
         </MudCard>
    </DialogContent>
 </MudDialog>
 
 @code {
     [Parameter]
-    public Action<Class?> OnClassAdded {get; set;}
+    public Action<User?> OnUserUpdated {get; set;}
     private HubConnection? hub;
     private User current_user;
-    MudTextField<string> codeField;
+    MudTextField<float> moneyField;
 
-    private async Task OnJoinClass()
+    private async Task OnAddMoney()
     {
-        if (codeField is null || codeField.Value.Trim().Count() <= 0 ) {
+        if (moneyField is null ) {
             return;
         }
-        var clss = await hub.InvokeAsync<Class?>(nameof(IAppHubServer.JoinClass), current_user.id, codeField.Value.ToString());
-        OnClassAdded(clss);
+        var user = await hub.InvokeAsync<User?>(nameof(IAppHubServer.AddMoneyToUser), current_user.id, moneyField.Value);
+        OnUserUpdated(user);
+        StateHasChanged();
     }
 
     protected override async Task OnInitializedAsync() {

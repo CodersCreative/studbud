@@ -1,0 +1,31 @@
+@using studbud.Client.Widgets
+@inject IDialogService Dialog
+
+<MudPaper Style="position:fixed; bottom: 10px; right : 10px;">
+    <MudStack R>
+        <MudIconButton Icon="@Icons.Material.Filled.Money" OnClick="OnWallet" Variant="Variant.Filled" Color="Color.Primary" Edge="Edge.Start"/>
+        <MudIconButton Icon="@Icons.Material.Filled.Chat" OnClick="OnAIChat" Variant="Variant.Filled" Color="Color.Primary" Edge="Edge.Start"/>
+    </MudStack>
+</MudPaper>
+
+@code {
+    private Task OnAIChat()
+    {
+        return Dialog.ShowAsync<AIChatDialog>("",new DialogOptions()
+        {
+
+            CloseOnEscapeKey = true 
+        });
+
+    }
+
+    private Task OnWallet()
+    {
+        return Dialog.ShowAsync<WalletDialog>("",new DialogOptions()
+        {
+
+            CloseOnEscapeKey = true 
+        });
+
+    }
+}

@@ -30,7 +30,7 @@
     <MudMainContent>
         <Strips/>
         @Body
-        <MudIconButton style="position:fixed; bottom: 10px; right : 10px;" Icon="@Icons.Material.Filled.Chat" OnClick="OnAIChat" Variant="Variant.Filled" Color="Color.Primary" Edge="Edge.Start"/>
+        <Shortcuts/>
     </MudMainContent>
 
 </MudLayout>
@@ -125,16 +125,6 @@
 
             CloseOnEscapeKey = true 
         });
-    }
-
-    private Task OnAIChat()
-    {
-        return Dialog.ShowAsync<AIChatDialog>("",new DialogOptions()
-        {
-
-            CloseOnEscapeKey = true 
-        });
-
     }
 }
 

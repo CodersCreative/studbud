@@ -35,6 +35,14 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
         return base.OnDisconnectedAsync(exception);
     }
 
+    public async Task<User?> AddMoneyToUser(string userId, float amt)
+    {
+        RecordId id = ("user", userId);
+        await dbClient.Query($"UPDATE {id} SET money += {amt};");
+        var res = await dbClient.Select<DbUser>(id);
+        return res!.ToBase();
+    }
+
     public async Task<Message> SendMessage(Message msg)
     {
         var res = await dbClient.Create("message", new DbMessage(msg));

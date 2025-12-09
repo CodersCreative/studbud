@@ -8,6 +8,7 @@ public interface IAppHubServer
 {
     Task<Message> SendMessage(Message msg);
     Task<Chat> CreateChat(Chat chat);
+    Task<User?> AddMoneyToUser(string userId, float amount);
     Task<Message?> GetAIResponse(string model, List<Message> messages);
     Task<List<FlashcardCard>> GetAIFlashcards(string prompt);
     Task<Message?> AddAIResponseToChat(string model, string parent);

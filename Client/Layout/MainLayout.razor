@@ -1,6 +1,5 @@
 ﻿@using studbud.Client.Widgets
 @inherits LayoutComponentBase
-@inject IDialogService Dialog
 
 <MudThemeProvider Theme="@_theme" IsDarkMode="true" />
 <MudPopoverProvider/>
@@ -11,7 +10,7 @@
     <MudMainContent >
         <Strips/>
         @Body
-        <MudIconButton style="position:fixed; bottom: 10px; right : 10px;" Icon="@Icons.Material.Filled.Chat" OnClick="OnAIChat" Variant="Variant.Filled" Color="Color.Primary" Edge="Edge.Start"/>
+        <Shortcuts/>
     </MudMainContent>
 </MudLayout>
 
@@ -69,14 +68,4 @@
         Divider = "#292838",
         OverlayLight = "#1e1e2d80",
     };
-
-    private Task OnAIChat()
-    {
-        return Dialog.ShowAsync<AIChatDialog>("",new DialogOptions()
-        {
-
-            CloseOnEscapeKey = true 
-        });
-
-    }
 }

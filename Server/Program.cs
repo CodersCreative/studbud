@@ -1,13 +1,16 @@
-﻿using Microsoft.AspNetCore.ResponseCompression;
+﻿using System.Diagnostics;
+using Microsoft.AspNetCore.ResponseCompression;
+using MudBlazor;
 using OllamaSharp;
 using studbud.Hubs;
 using SurrealDb.Net;
 
 var builder = WebApplication.CreateBuilder(args);
+var surrealUrl = "http://127.0.0.1:8000";
 
 var surreal = SurrealDbOptions
     .Create()
-    .WithEndpoint("http://127.0.0.1:8000")
+    .WithEndpoint(surrealUrl)
     .WithNamespace("main")
     .WithDatabase("main")
     .Build();
@@ -68,6 +71,24 @@ app.Run();
 
 async Task InitializeDbAsync()
 {
+    HttpClient httpClient = new HttpClient();
+
+    var needsStart = false;
+
+    try
+    {
+        needsStart = !(await httpClient.GetAsync(surrealUrl)).IsSuccessStatusCode;
+    }catch (Exception e)
+    {
+        needsStart = true;
+    }
+
+    if (needsStart) {
+        Thread newThread = new Thread(new ThreadStart(() => Process.Start("surreal start memory --allow-all --unauthenticated")));
+        newThread.Start();
+        Thread.Sleep(500);
+    }
+
     var surrealDbClient = new SurrealDbClient(surreal);
     await DefineSchemaAsync(surrealDbClient);
 }
