@@ -196,10 +196,7 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
     {
 
         var res = "";
-        if (!await IsAIAvailable())
-        {
-            return null;
-        }
+    
 
         if (model == "ministral" || !await IsAIAvailable())
         {

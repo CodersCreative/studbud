@@ -1,21 +1,99 @@
 ﻿@page "/print"
 @layout Layout.RootLayout
-
+@using studbud.Client.Shared
+@inject FlashcardStateService FlashcardStateService
+@inject NavigationManager NavigationManager
 
 <MudText Typo="Typo.h3" Class="mb-12 mt-20" Color="Color.Primary" Align="Align.Center">
-    Flash Card Edtor
+    Flash Card Editor
 </MudText>
 
+<MudStack Spacing="8" Justify="Justify.FlexStart">
 
+    <!-- Deck Info -->
+    <MudGrid Justify="Justify.Center">
+        <MudItem xs="12" md="8" lg="8">
+            <MudCard Style="border-radius:16px; height:170px; background-color:#292929;" Elevation="4" Class="mb-4 p-2">
+                <MudGrid Class="pa-3" GutterSize="3">
+                    <MudItem xs="12" sm="10">
+                        <MudTextField @bind-Value="DeckName"
+                                      Label="Flashcard deck name"
+                                      Required="true"
+                                      Variant="Variant.Filled"
+                                      Style="border-radius:16px; width:100%; border-bottom-width:0px;" />
+                    </MudItem>
 
+                    <MudItem xs="12" sm="2">
+                        <MudSelect @bind-Value="Visibility" Variant="Variant.Filled" Style="border-radius:16px;">
+                            <MudSelectItem Value=@("Public") />
+                            <MudSelectItem Value=@("Hidden") />
+                            <MudSelectItem Value=@("Private") />
+                        </MudSelect>
+                    </MudItem>
+                </MudGrid>
+                <MudText Typo="Typo.body1" Class="ml-3 mb-1">All changes are saved automatically.</MudText>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
 
+    <!-- Loop over each flashcard -->
+    @foreach (var card in flashcards)
+    {
+        <MudGrid Justify="Justify.Center">
+            <MudItem xs="12" md="8" lg="8">
+                <MudCard Style="border-radius:16px; background-color:#292929;" Elevation="4" Class="mb-4 p-2">
 
-    
-        <MudCard Style=" padding:24px; border-radius:16px;" Elevation="4">
-            
-            <MudTextField T="string" Label="Username" HelperText="Username" Required="true" RequiredError="FlashCard deck name"  Variant="Variant.Filled" Style="border-radius:16px"/>
-       
+                    <!-- Toolbar -->
+                    <MudGrid Justify="Justify.Center">
+                        <MudPaper Style="width:100%; max-width:400px; border-radius:12px;" Class="mb-4">
+                            <MudStack Row="true" Justify="Justify.Center" Spacing="1" Class="p-2">
+                                <MudIconButton Icon="@Icons.Material.Filled.Undo" Color="Color.Primary" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Redo" Color="Color.Primary" />
+                                <MudIconButton Icon="@Icons.Material.Filled.FormatBold" Color="Color.Primary" />
+                                <MudIconButton Icon="@Icons.Material.Filled.FormatItalic" Color="Color.Primary" />
+                                <MudIconButton Icon="@Icons.Material.Filled.FormatUnderlined" Color="Color.Primary" />
+                                <MudIconButton Icon="@Icons.Material.Filled.FormatListNumbered" Color="Color.Primary" />
+                                <MudIconButton Icon="@Icons.Material.Filled.List" Color="Color.Primary" />
+                            </MudStack>
+                        </MudPaper>
+                    </MudGrid>
 
-        </MudCard>
-    
+                    <!-- Front/Back Fields -->
+                    <MudGrid Class="pa-3" GutterSize="3">
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="card.front"
+                                          Label="Front of Card"
+                                          Variant="Variant.Filled"
+                                          Style="border-radius:16px; width:100%;" />
+                        </MudItem>
 
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="card.back"
+                                          Label="Back of Card"
+                                          Variant="Variant.Filled"
+                                          Style="border-radius:16px; width:100%;" />
+                        </MudItem>
+                    </MudGrid>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    }
+</MudStack>
+
+@code {
+    private string DeckName { get; set; } = string.Empty;
+    private string Visibility { get; set; } = "Public";
+    private List<FlashcardCard> flashcards = new();
+
+    protected override void OnInitialized()
+    {
+        // Retrieve the data stored in the shared service
+        flashcards = FlashcardStateService.Flashcards;
+
+        if (!flashcards.Any())
+        {
+            // Optional: Redirect back if they land here without any data
+            // NavigationManager.NavigateTo("/generate-cards");
+        }
+    }
+}

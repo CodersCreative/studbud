@@ -6,7 +6,8 @@
 @layout RootLayout
 @inject IDialogService Dialog
 @inject HubService hubService
-@inherits LayoutComponentBase
+@inject FlashcardStateService FlashcardStateService
+@inject NavigationManager NavigationManager
 
 <MudText Typo="Typo.h3" Class="mb-12 mt-20" Color="Color.Primary" Align="Align.Center">
     AI FlashCards Generator
@@ -15,15 +16,15 @@
 <MudText Typo="Typo.body2" Align="Align.Center">Turn your notes into interactive flashcards! Test your knowledge, track your progress,</MudText>
 <MudText Typo="Typo.body2" Align="Align.Center">and learn faster with smart, AI-generated quiz cards </MudText>
 
-<!-- Steps Cards (unchanged) -->
+<!-- Steps Cards -->
 <MudStack Row="true" Spacing="8" Class="ml-6 mt-8 mr-6" AlignItems="AlignItems.Center" Justify="Justify.Center">
     <!-- Step 1 -->
     <MudCard Style="border-radius: 16px; width:350px; height:350px;" Elevation="4" Class="p-2">
         <MudCardContent>
             <MudImage Src="images/written-notes.jpeg" Width="180" Height="150" Alt="Step 1" Class="rounded-lg ma-4 ml-18" />
             <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-2" Align="Align.Center">Step 1: Upload</MudText>
-            <MudText Typo="Typo.body2" Align="Align.Center"> Upload the Pdf file or word doc , and let our AI </MudText>
-            <MudText Typo="Typo.body2" Align="Align.Center"> make intuitive flashcards for u </MudText>
+            <MudText Typo="Typo.body2" Align="Align.Center"> Upload the Pdf file or word doc, and let our AI </MudText>
+            <MudText Typo="Typo.body2" Align="Align.Center"> make intuitive flashcards for you </MudText>
         </MudCardContent>
     </MudCard>
 
@@ -34,8 +35,7 @@
         <MudCardContent>
             <MudImage Src="images/written-notes.jpeg" Width="180" Height="150" Alt="Step 2" Class="rounded-lg ma-4 ml-18" />
             <MudText Typo="Typo.h5" Class="mb-2" Color="Color.Primary" Align="Align.Center">Step 2: Revise</MudText>
-            <MudText Typo="Typo.body2" Align="Align.Center"> Upload the Pdf file or word doc , and let our AI </MudText>
-            <MudText Typo="Typo.body2" Align="Align.Center"> make intuitive flashcards for u </MudText>
+            <MudText Typo="Typo.body2" Align="Align.Center"> Review and edit your flashcards </MudText>
         </MudCardContent>
     </MudCard>
 
@@ -46,8 +46,7 @@
         <MudCardContent>
             <MudImage Src="images/written-notes.jpeg" Width="180" Height="150" Alt="Step 3" Class="rounded-lg ma-4 ml-18" />
             <MudText Typo="Typo.h5" Class="mb-2" Color="Color.Primary" Align="Align.Center">Step 3: Test </MudText>
-            <MudText Typo="Typo.body2" Align="Align.Center"> Upload the Pdf file or word doc , and let our AI </MudText>
-            <MudText Typo="Typo.body2" Align="Align.Center"> make intuitive flashcards for u </MudText>
+            <MudText Typo="Typo.body2" Align="Align.Center"> Test yourself with AI flashcards </MudText>
         </MudCardContent>
     </MudCard>
 </MudStack>
@@ -62,17 +61,16 @@
         opacity: 0;
     }
 </style>
+
 <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-12">
     Create simple and beautiful cards with AI. You can make single or double sided cards
 </MudText>
 
 <MudGrid Justify="Justify.Center" Class="mt-10">
     <MudItem xs="12" md="8" lg="8">
-        <MudCard Style="border-radius: 16px;  " Elevation="4" Class="p-2">
-
+        <MudCard Style="border-radius: 16px;" Elevation="4" Class="p-2">
             <MudCardContent>
                 <MudTabs Rounded="true" RoundedSize="Medium" Elevation="2" Class="mt-6">
-
                     <!-- Tab 1: Type Notes -->
                     <MudTabPanel Text="Type Notes">
                         <MudTextField @bind-Value="UserNotes"
@@ -155,7 +153,8 @@
     private List<FlashcardCard> flashcards = new();
     private HubConnection? hub;
 
-    protected override async Task OnInitializedAsync() {
+    protected override async Task OnInitializedAsync()
+    {
         await base.OnInitializedAsync();
         hub = hubService.GetHubConnection().Build();
         await hub.StartAsync();
@@ -163,7 +162,6 @@
 
     private async Task GenerateFromTextAsync()
     {
-        // Show the progress dialog
         var dialogReference = await Dialog.ShowAsync<Widgets.CreatingCards>("", new DialogOptions
         {
             CloseOnEscapeKey = false,
@@ -173,7 +171,7 @@
         if (string.IsNullOrWhiteSpace(UserNotes))
         {
             snackbar.Add("Please enter some notes.", Severity.Warning);
-            dialogReference.Close(); // close immediately since nothing to process
+            dialogReference.Close();
             return;
         }
 
@@ -183,9 +181,14 @@
             if (!response.Any())
             {
                 snackbar.Add("Failed to generate flashcards.", Severity.Error);
-            }else {
+            }
+            else
+            {
+                FlashcardStateService.SetFlashcards(response);
                 flashcards = response;
-                snackbar.Add($"Generated {flashcards.Count} flashcards!", Severity.Success);
+                snackbar.Add($"Generated {response.Count} flashcards!", Severity.Success);
+
+                NavigationManager.NavigateTo("/print");
             }
         }
         catch (Exception ex)
@@ -194,7 +197,6 @@
         }
         finally
         {
-            // Always close the dialog when done
             dialogReference.Close();
         }
     }
@@ -237,9 +239,14 @@
                 if (!response.Any())
                 {
                     snackbar.Add("Failed to generate flashcards.", Severity.Error);
-                }else {
+                }
+                else
+                {
+                    FlashcardStateService.SetFlashcards(response);
                     flashcards = response;
-                    snackbar.Add($"Generated {flashcards.Count} flashcards from {file.Name}!", Severity.Success);
+                    snackbar.Add($"Generated {response.Count} flashcards from {file.Name}!", Severity.Success);
+
+                    NavigationManager.NavigateTo("/print");
                 }
             }
             catch (Exception ex)

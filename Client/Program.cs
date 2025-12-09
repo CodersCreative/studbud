@@ -19,4 +19,5 @@ builder.Services.AddBlazoredSessionStorage();
 builder.Services.AddMudServices();
 builder.Services.AddMudMarkdownServices();
 builder.Services.AddScoped<HubService>();
+builder.Services.AddSingleton<FlashcardStateService>();
 await builder.Build().RunAsync();
