@@ -1,13 +1,21 @@
-﻿@page "/Edit-Page"
+﻿@page "/print"
+@layout Layout.RootLayout
 
 
 <MudText Typo="Typo.h3" Class="mb-12 mt-20" Color="Color.Primary" Align="Align.Center">
-    AI FlashCards Generator
+    Flash Card Edtor
 </MudText>
 
 
-<MudCard>
-    <MudStack Row="true">
 
-    </MudStack>
-</MudCard>
+
+
+    
+        <MudCard Style=" padding:24px; border-radius:16px;" Elevation="4">
+            
+            <MudTextField T="string" Label="Username" HelperText="Username" Required="true" RequiredError="FlashCard deck name"  Variant="Variant.Filled" Style="border-radius:16px"/>
+       
+
+        </MudCard>
+    
+
