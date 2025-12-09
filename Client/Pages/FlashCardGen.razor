@@ -1,8 +1,11 @@
 ﻿@page "/flash"
-@inject ISnackbar Snackbar
+@using Microsoft.AspNetCore.SignalR.Client
+@using studbud.Client.Shared
+@inject ISnackbar snackbar
 @inject HttpClient Http
-@layout Layout.RootLayout
+@layout RootLayout
 @inject IDialogService Dialog
+@inject HubService hubService
 @inherits LayoutComponentBase
 
 <MudText Typo="Typo.h3" Class="mb-12 mt-20" Color="Color.Primary" Align="Align.Center">
@@ -124,17 +127,17 @@
     </MudItem>
 </MudGrid>
 
-@if (Flashcards.Any())
+@if (flashcards.Any())
 {
     <MudText Typo="Typo.h5" Class="mt-8 mb-4" Align="Align.Center">Generated Flashcards</MudText>
     <MudGrid Justify="Justify.Center">
-        @foreach (var card in Flashcards)
+        @foreach (var card in flashcards)
         {
             <MudItem xs="12" sm="6" md="4">
                 <MudCard Style="border-radius: 12px; margin-bottom: 12px;" Elevation="2" Class="p-2">
                     <MudCardContent>
-                        <MudText Typo="Typo.subtitle1" Color="Color.Primary"><b>Front:</b> @card.Front</MudText>
-                        <MudText Typo="Typo.body2"><b>Back:</b> @card.Back</MudText>
+                        <MudText Typo="Typo.subtitle1" Color="Color.Primary"><b>Front:</b> @card.front</MudText>
+                        <MudText Typo="Typo.body2"><b>Back:</b> @card.back</MudText>
                     </MudCardContent>
                 </MudCard>
             </MudItem>
@@ -149,12 +152,19 @@
     private readonly List<string> _fileNames = new();
     private readonly List<IBrowserFile> _uploadedFiles = new();
     private MudFileUpload<IReadOnlyList<IBrowserFile>>? _fileUpload;
-    private List<Flashcard> Flashcards = new();
+    private List<FlashcardCard> flashcards = new();
+    private HubConnection? hub;
+
+    protected override async Task OnInitializedAsync() {
+        await base.OnInitializedAsync();
+        hub = hubService.GetHubConnection().Build();
+        await hub.StartAsync();
+    }
 
     private async Task GenerateFromTextAsync()
     {
         // Show the progress dialog
-        var dialogReference = Dialog.Show<Widgets.CreatingCards>("", new DialogOptions
+        var dialogReference = await Dialog.ShowAsync<Widgets.CreatingCards>("", new DialogOptions
         {
             CloseOnEscapeKey = false,
             BackdropClick = false
@@ -162,31 +172,25 @@
 
         if (string.IsNullOrWhiteSpace(UserNotes))
         {
-            Snackbar.Add("Please enter some notes.", Severity.Warning);
+            snackbar.Add("Please enter some notes.", Severity.Warning);
             dialogReference.Close(); // close immediately since nothing to process
             return;
         }
 
         try
         {
-            var response = await Http.PostAsJsonAsync("/api/flashcards", new FlashcardRequest { Notes = UserNotes });
-            if (response.IsSuccessStatusCode)
+            var response = await hub.InvokeAsync<List<FlashcardCard>>(nameof(IAppHubServer.GetAIFlashcards), UserNotes);
+            if (!response.Any())
             {
-                var cards = await response.Content.ReadFromJsonAsync<List<Flashcard>>();
-                if (cards != null)
-                {
-                    Flashcards = cards;
-                    Snackbar.Add($"Generated {cards.Count} flashcards!", Severity.Success);
-                }
-            }
-            else
-            {
-                Snackbar.Add("Failed to generate flashcards.", Severity.Error);
+                snackbar.Add("Failed to generate flashcards.", Severity.Error);
+            }else {
+                flashcards = response;
+                snackbar.Add($"Generated {flashcards.Count} flashcards!", Severity.Success);
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            snackbar.Add($"Error: {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -213,7 +217,7 @@
     {
         if (!_uploadedFiles.Any())
         {
-            Snackbar.Add("No files selected.", Severity.Warning);
+            snackbar.Add("No files selected.", Severity.Warning);
             return;
         }
 
@@ -228,25 +232,19 @@
                 var content = new MultipartFormDataContent();
                 content.Add(new ByteArrayContent(ms.ToArray()), "file", file.Name);
 
-                var response = await Http.PostAsync("/api/flashcards/upload", content);
+                var response = await hub.InvokeAsync<List<FlashcardCard>>(nameof(IAppHubServer.GetAIFlashcards), content);
 
-                if (response.IsSuccessStatusCode)
+                if (!response.Any())
                 {
-                    var cards = await response.Content.ReadFromJsonAsync<List<Flashcard>>();
-                    if (cards != null)
-                    {
-                        Flashcards.AddRange(cards);
-                        Snackbar.Add($"Generated {cards.Count} flashcards from {file.Name}!", Severity.Success);
-                    }
-                }
-                else
-                {
-                    Snackbar.Add($"Failed to upload {file.Name}.", Severity.Error);
+                    snackbar.Add("Failed to generate flashcards.", Severity.Error);
+                }else {
+                    flashcards = response;
+                    snackbar.Add($"Generated {flashcards.Count} flashcards from {file.Name}!", Severity.Success);
                 }
             }
             catch (Exception ex)
             {
-                Snackbar.Add($"Error processing {file.Name}: {ex.Message}", Severity.Error);
+                snackbar.Add($"Error processing {file.Name}: {ex.Message}", Severity.Error);
             }
         }
 
@@ -259,21 +257,10 @@
         await (_fileUpload?.ClearAsync() ?? Task.CompletedTask);
         _fileNames.Clear();
         _uploadedFiles.Clear();
-        Flashcards.Clear();
+        flashcards.Clear();
         ClearDragClass();
     }
 
     private void SetDragClass() => _dragClass = $"{DefaultDragClass} mud-border-primary";
     private void ClearDragClass() => _dragClass = DefaultDragClass;
-
-    public class Flashcard
-    {
-        public string Front { get; set; } = "";
-        public string Back { get; set; } = "";
-    }
-
-    public class FlashcardRequest
-    {
-        public string Notes { get; set; } = "";
-    }
 }

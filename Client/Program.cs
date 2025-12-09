@@ -7,7 +7,6 @@ using MudBlazor;
 using MudBlazor.Services;
 using studbud.Client;
 using studbud.Client.Shared;
-using studbud.Server.Models;
 using studbud.Shared.Models;
 using System.Net.Http;
 
@@ -24,8 +23,4 @@ builder.Services.AddBlazoredSessionStorage();
 builder.Services.AddMudServices();
 builder.Services.AddMudMarkdownServices();
 builder.Services.AddSingleton<HubService>();
-
-// ✅ Register AiApi service correctly
-builder.Services.AddHttpClient<AiApi>();
-
 await builder.Build().RunAsync();

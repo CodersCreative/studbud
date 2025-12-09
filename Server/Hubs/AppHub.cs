@@ -1,7 +1,7 @@
-using System.Reactive.Threading.Tasks;
+using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.AI;
 using studbud.Shared;
 using studbud.Shared.Models;
 using SurrealDb.Net;
@@ -12,6 +12,7 @@ namespace studbud.Hubs;
 public class AppHub : Hub<IAppHubClient>, IAppHubServer
 {
     private Dictionary<String, String> connectedChats = new();
+    HttpClient httpClient = new HttpClient();
     private readonly SurrealDbClient dbClient;
     private readonly OllamaSharp.OllamaApiClient AIClient;
 
@@ -129,11 +130,13 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
     {
         if (!await IsAIAvailable())
         {
-            return null;
+            return ["ministral"];
         }
 
         var models = await AIClient.ListLocalModelsAsync();
-        return models.Select((x) => x.Name)?.ToList();
+        var modelNames = models.Select((x) => x.Name)?.ToList() ?? [];
+        modelNames.Add("ministral");
+        return modelNames;
     }
 
     private (string, string?) SplitThink(String text)
@@ -149,33 +152,92 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
         return (content, split[0]);
     }
 
-    public async Task<Message?> GetAIResponse(string model, List<Message> messages)
+    public async Task<List<FlashcardCard>> GetAIFlashcards(string prompt)
     {
+        var result = await GetAIResponse("ministral", [new Message {userId="User", date=DateTime.Now, text=$"Generate as many flashcards as you can from these notes::\n{prompt}"}]);
+        var jsonDoc = JsonDocument.Parse(result?.text ?? "");
+        string flashcardsText = jsonDoc.RootElement
+            .GetProperty("choices")[0]
+            .GetProperty("message")
+            .GetProperty("content")
+            .GetString();
+
+        var lines = flashcardsText.Split("\n");
+        var cards = new List<FlashcardCard>();
+        FlashcardCard? currentCard = null;
+
+        foreach (var line in lines)
+        {
+            if (line.StartsWith("**Front:**") || line.Contains("Front:"))
+            {
+                currentCard = new FlashcardCard();
+                currentCard.front = line.Replace("**Front:**", "").Replace("Front:", "").Trim();
+            }
+            else if (line.StartsWith("**Back:**") || line.Contains("Back:"))
+            {
+                currentCard!.back = line.Replace("**Back:**", "").Replace("Back:", "").Trim();
+                cards.Add(currentCard);
+                currentCard = null;
+            }
+        }
+
+        return cards;
+    }
+
+    public async Task<Message?> GetAIResponse(string model, List<Message> msgs)
+    {
+
+        var res = "";
         if (!await IsAIAvailable())
         {
             return null;
         }
 
-        var chat = new OllamaSharp.Chat(AIClient);
-        chat.Model = model;
-        var message = messages.Last();
-        messages.RemoveAt(messages.Count - 1);
-        chat.Messages = messages
-            .Select(
-                (x) =>
-                    new OllamaSharp.Models.Chat.Message(
-                        x.userId == "AI"
-                            ? OllamaSharp.Models.Chat.ChatRole.Assistant
-                            : OllamaSharp.Models.Chat.ChatRole.User,
-                        SplitThink(x.text ?? "").Item1
-                    )
-            )
-            .ToList();
-
-        var res = "";
-        await foreach (var txt in chat.SendAsync(message.text ?? ""))
+        if (model == "ministral" || !await IsAIAvailable())
         {
-            res += txt;
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "Vsf0g0De4A5r0H1sWqBhI6X9qjN0R4sO");
+
+            var requestBody = new
+            {
+                model = "ministral-8b-2410",
+                messages = msgs
+                .Select(
+                    (x) =>
+                        new {
+                            role = x.userId == "AI"
+                                ? "assistant"
+                                : "user",
+                            content = SplitThink(x.text ?? "").Item1
+                        }
+                )
+                .ToList(),
+                max_tokens = 300
+            };
+
+            var content = new StringContent(JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json");
+            var response = await httpClient.PostAsync("https://api.mistral.ai/v1/chat/completions", content);
+            res = await response.Content.ReadAsStringAsync();
+        }else {
+            var chat = new OllamaSharp.Chat(AIClient);
+            chat.Model = model;
+            var message = msgs.Last();
+            msgs.RemoveAt(msgs.Count - 1);
+            chat.Messages = msgs
+                .Select(
+                    (x) =>
+                        new OllamaSharp.Models.Chat.Message(
+                            x.userId == "AI"
+                                ? OllamaSharp.Models.Chat.ChatRole.Assistant
+                                : OllamaSharp.Models.Chat.ChatRole.User,
+                            SplitThink(x.text ?? "").Item1
+                        )
+                )
+                .ToList();
+            
+            await foreach (var txt in chat.SendAsync(message.text ?? ""))
+            {
+                res += txt;
+            }
         }
 
         return new Message
@@ -190,9 +252,9 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
     {
         var messages = await GetMessages(parent);
         var response = await GetAIResponse(model, messages);
-        response.parentId = parent;
         if (response is null)
             return null;
+        response.parentId = parent;
         return await SendMessage(response);
     }
 
@@ -333,10 +395,27 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
         return res.ToBase();
     }
 
+    public async Task<Quiz> UpdateQuiz(Quiz quiz)
+    {
+        var res = await dbClient.Update(new DbQuiz(quiz));
+        return res.ToBase();
+    }
+
     public async Task<Question> CreateQuestion(Question q)
     {
         var res = await dbClient.Create("question", new DbQuestion(q));
         return res.ToBase();
+    }
+
+    public async Task<Question> UpdateQuestion(Question q)
+    {
+        var res = await dbClient.Update(new DbQuestion(q));
+        return res.ToBase();
+    }
+
+    public async Task RemoveQuestion(string questionId)
+    {
+        await dbClient.Delete(("question", questionId));
     }
 
     public async Task<Quiz> GetQuiz(string quizId)

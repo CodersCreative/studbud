@@ -57,6 +57,11 @@
 
     <MudItem xs="12" md="10">
         @if (quiz is not null) {
+            if (editing) {
+                <CreateQuiz quiz="@quiz"/>
+            }else {
+                <AnswerQuiz quiz="@quiz"/>
+            }
             <!-- <ClassView clss="@clss"/> -->
         }else{
             <MudText Typo="Typo.h6" Class="mb-2">

@@ -9,6 +9,7 @@ public interface IAppHubServer
     Task<Message> SendMessage(Message msg);
     Task<Chat> CreateChat(Chat chat);
     Task<Message?> GetAIResponse(string model, List<Message> messages);
+    Task<List<FlashcardCard>> GetAIFlashcards(string prompt);
     Task<Message?> AddAIResponseToChat(string model, string parent);
     Task<List<string>?> GetAIModels();
     Task<bool> IsAIAvailable();
@@ -33,8 +34,11 @@ public interface IAppHubServer
     Task<Submission> SubmitAssignment(Submission sub);
     Task<List<Submission>> GetSubmissions(string assignmentId);
     Task<Quiz> CreateQuiz(Quiz quiz);
+    Task<Quiz> UpdateQuiz(Quiz quiz);
     Task<Quiz> GetQuiz(string quizId);
     Task<Question> CreateQuestion(Question q);
+    Task<Question> UpdateQuestion(Question q);
+    Task RemoveQuestion(string questionId);
     Task<List<Question>> GetQuestions(string quizId);
     Task<QuizSubmission> SubmitQuiz(QuizSubmission sub);
     Task<List<QuizSubmission>> GetQuizSubmissions(string quizId);
