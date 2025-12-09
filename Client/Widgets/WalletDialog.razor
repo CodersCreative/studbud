@@ -1,0 +1,59 @@
+@using Microsoft.AspNetCore.SignalR.Client
+@using studbud.Client.Shared
+@using studbud.Shared.Models
+@inject IDialogService Dialog
+
+@inject ISnackbar Snackbar
+@inject NavigationManager navigationManager
+@inject HubService hubService
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@implements IAsyncDisposable
+
+<MudDialog Style="background-color: transparent; box-shadow: none;">
+   <DialogContent>
+        <MudCard Style="width:400px; padding:24px; border-radius:16px;" Elevation="4">
+            <MudText Typo="Typo.h5" Class="mb-4">Create Class</MudText>
+            <MudTextField T="string" Label="Code" HelperText="Class Code" @ref="codeField" />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;" OnClick="OnJoinClass">Join</MudButton>
+        </MudCard>
+   </DialogContent>
+</MudDialog>
+
+@code {
+    [Parameter]
+    public Action<Class?> OnClassAdded {get; set;}
+    private HubConnection? hub;
+    private User current_user;
+    MudTextField<string> codeField;
+
+    private async Task OnJoinClass()
+    {
+        if (codeField is null || codeField.Value.Trim().Count() <= 0 ) {
+            return;
+        }
+        var clss = await hub.InvokeAsync<Class?>(nameof(IAppHubServer.JoinClass), current_user.id, codeField.Value.ToString());
+        OnClassAdded(clss);
+    }
+
+    protected override async Task OnInitializedAsync() {
+        await base.OnInitializedAsync();
+        hub = hubService.GetHubConnection().Build();
+        await hub.StartAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+        if (current_user is null) {
+            current_user = await sessionStorage.GetItemAsync<User>("user");
+        }
+    }
+
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hub is not null) {
+            await hub.DisposeAsync();
+        }
+    }
+}
