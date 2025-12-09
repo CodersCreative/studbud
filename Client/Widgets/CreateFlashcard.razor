@@ -13,6 +13,7 @@
         <MudStack Row="true">
             <MudTextField Label="Flashcard Name" @bind-Value="flashcard?.name" />
             <MudSpacer />
+            <MudCheckBox @bind-Value="flashcard?.published" Label="Publish" Text="Publish"/>
             <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Inherit" Edge="Edge.End" />
             <MudIconButton OnClick="SaveFlashcard" Icon="@Icons.Material.Filled.Save" Color="Color.Inherit" Edge="Edge.End" />
         </MudStack>

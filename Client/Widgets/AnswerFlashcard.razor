@@ -1,6 +1,91 @@
 @using studbud.Shared.Models
+@using Microsoft.AspNetCore.SignalR.Client
+@using studbud.Client.Shared
+@using System.Linq
+@inject HubService hubService
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@inject NavigationManager navigationManager
+@implements IAsyncDisposable
+@layout MinLayout
+
+<MudPaper Class="d-flex flex-column" Style="border-radius:16px; padding:16px; height : 100%;">
+    <MudStack Spacing="2">
+        <MudStack Row="true">
+            <MudText Typo="Typo.h6" Class="mb-2" Style="font-weight:bold;">
+                @(flashcard?.name ?? "Select a flashcard")
+            </MudText>
+            <MudSpacer />
+        </MudStack>
+        <MudDivider/>
+        <MudText Typo="Typo.h6" Style="font-weight: bold;" Class="mt-8">
+            Description
+        </MudText>
+        <MudMarkdown Value="@flashcard.description" />
+        <MudDivider/>
+            <MudStack Row="true">
+                <MudSpacer/>
+                <MudPagination Variant="Variant.Outlined" Count="@(cards.Count)" @bind-Selected="showing"/>
+                <MudSpacer/>
+            </MudStack>
+        <MudDivider/>
+        @if (cards.Count >= showing && showing >= 1) {
+            <MudCarousel Style="min-height : 50vh; height : 100%;" AutoCycle="false" Class="mud-width-full" ShowBullets="false" TData="object">
+                <MudCarouselItem Style="overflow:scroll; padding : 20px; border-radius : 20px;" Color="@Color.Default">
+                    <MudMarkdown Value="@(cards[getShowing()].front)" />
+                </MudCarouselItem>
+                <MudCarouselItem Style="overflow:scroll; padding : 20px; border-radius : 20px;" Color="@Color.Surface">
+                    <MudMarkdown Value="@(cards[getShowing()].back)" />
+                </MudCarouselItem>
+            </MudCarousel>
+        } else {
+            <div>Out of bounds</div>
+        }
+    </MudStack>
+</MudPaper>
 
 @code {
     [Parameter]
-	public Flashcard? flashcard {get; set;}
+    public required Flashcard flashcard {get; set;}
+    [Parameter]
+    public Action<Flashcard?> OnFlashcardChanged {get; set;} = (x) => {};
+    private HubConnection? hub;
+    private List<FlashcardCard> cards = new();
+    private User? current_user;
+    private int showing {get; set;} = 1;
+
+    private int getShowing() {
+        return showing - 1;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        hub = hubService.GetHubConnection().Build();
+        await hub.StartAsync();
+
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        if (current_user is null) {
+            current_user = await sessionStorage.GetItemAsync<User>("user");
+            flashcard = await hub.InvokeAsync<Flashcard>(nameof(IAppHubServer.GetFlashcard), flashcard.id);
+            cards = await hub.InvokeAsync<List<FlashcardCard>>(nameof(IAppHubServer.GetFlashcardCards), flashcard.id);
+
+            if (cards.Count <= 0) {
+                var c = new FlashcardCard { front = "", back = "",flashcardId = flashcard.id};
+                cards.Add(c);
+            }
+                
+            StateHasChanged();
+            
+            
+        }
+    } 
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hub is not null) await hub.DisposeAsync();
+    }
 }

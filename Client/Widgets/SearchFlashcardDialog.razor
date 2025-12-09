@@ -14,11 +14,13 @@
         <MudCard Style="width:400px; padding:24px; border-radius:16px;" Elevation="4">
             <MudText Typo="Typo.h5" Class="mb-4">Search Flashcards</MudText>
             <MudStack Style="overflow:scroll;" Spacing="3">
-                <MudTextField @ref="searchField" T="string" AutoGrow Variant="Variant.Filled" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Search" OnAdornmentClick="() => Search(false)" AdornmentAriaLabel="Submit" />
+                <MudTextField @ref="searchField" T="string" Lines="1" Variant="Variant.Filled" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Search" OnAdornmentClick="() => Search(false)" AdornmentAriaLabel="Submit" />
                 @foreach (var card in flashcards) {   
                     <MudButton Variant="Variant.Outlined" Color="Color.Surface" FullWidth="true" OnClick="() => OnFlashcardOpened(card)">
-                        <MudText Typo="Typo.h6" style="text-align: center; vertical-align: middle;">@card.name</MudText>
-                        <MudMarkdown Value="@card.description"/>
+                        <MudStack>
+                            <MudText Typo="Typo.h6" style="text-align: center; vertical-align: middle;">@card.name</MudText>
+                            <MudMarkdown Value="@card.description"/>
+                        </MudStack>
                     </MudButton>
                 }
             </MudStack>
@@ -60,7 +62,13 @@
             return;
         }
 
-        flashcards = (await hub.InvokeAsync<List<Flashcard>>(nameof(IAppHubServer.SearchFlashcards), searchField.Value)).Where((x) => x.published ?? false || x.id == current_user?.id).ToList();
+        try {
+            flashcards = (await hub.InvokeAsync<List<Flashcard>>(nameof(IAppHubServer.SearchFlashcards), searchField.Value)).Where((x) => x.published ?? false || x.id == current_user?.id).ToList();
+        } catch (Exception e) {
+            flashcards = preview;
+        }
+
+        
     }
 
     public async ValueTask DisposeAsync()

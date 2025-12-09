@@ -13,6 +13,7 @@
         <MudStack Row="true">
             <MudTextField Label="Quiz Name" @bind-Value="quiz?.name" />
             <MudSpacer />
+            <MudCheckBox @bind-Value="quiz?.published" Label="Publish" Text="Publish"/>
             <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Inherit" Edge="Edge.End" />
             <MudIconButton OnClick="SaveQuiz" Icon="@Icons.Material.Filled.Save" Color="Color.Inherit" Edge="Edge.End" />
         </MudStack>
