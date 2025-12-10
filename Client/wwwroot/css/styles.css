@@ -1,28 +1,41 @@
-﻿.gradient-bg {
+﻿/* --- Base Styles for Correct Scrolling --- */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden; /* Prevents horizontal scrolling caused by animations */
+    background-color: #0d0b1c; /* Fallback */
+}
+
+/* --- Force the Content Wrapper to Scroll --- */
+#main-scroll-container {
+    min-height: 100vh; /* Ensures the container is at least full height */
+    overflow-y: scroll !important; /* Explicitly forces vertical scrolling */
+}
+
+
+/* --- Your Gradient & Blob Styles --- */
+.gradient-bg {
     width: 100vw;
-    min-height: 100vh; /* allows the div to grow with content */
+    min-height: 100vh;
     position: relative;
-    overflow: visible; /* allows scrolling */
     background: linear-gradient(180deg, #0d0b1c 0%, #1c1b2f 50%, #2a2750 100%);
 }
 
-/* Optional: scrollable content wrapper */
 .scrollable-content {
     position: relative;
-    z-index: 1; /* make content appear above blobs */
-    min-height: 100vh;
+    z-index: 1; /* Content above blobs */
 }
 
-/* Blobs stay behind content */
 .blob {
     position: absolute;
     border-radius: 50%;
     mix-blend-mode: screen;
     filter: blur(22px);
-    z-index: 0; /* ensure blobs are behind content */
+    z-index: 0; /* Blobs behind content */
 }
 
-/* Individual blobs with animations */
+/* Individual blobs and keyframes remain unchanged from your original code */
 .gradients-container .blob1 {
     width: 40%;
     height: 40%;
@@ -50,7 +63,6 @@
     animation: moveHorizontal 100s ease-in-out infinite;
 }
 
-/* Keyframe animations */
 @keyframes moveVertical {
     0% {
         transform: translateY(0);

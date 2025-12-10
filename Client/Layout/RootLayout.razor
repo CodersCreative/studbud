@@ -8,31 +8,30 @@
 <MudDialogProvider/>
 <MudSnackbarProvider/>
 <div class="gradient-bg">
-    <!-- Animated blobs -->
+    <!-- Animated blobs (background elements) -->
     <div class="gradients-container">
         <div class="blob blob1"></div>
         <div class="blob blob2"></div>
         <div class="blob blob3"></div>
     </div>
 
-    <!-- Scrollable content -->
-    <div class="scrollable-content">
+    <!-- Scrollable content wrapper (foreground elements) -->
+    <!-- This ID is targeted by the CSS to ensure scroll works -->
+    <div id="main-scroll-container" class="scrollable-content">
         <MudLayout Class="no-x-overflow">
             <MudAppBar Elevation="0">
                 <MudText Typo="Typo.h5" Class="ml-3">StudBud</MudText>
-
                 <MudStack Row="true" Spacing="2" Class="ml-4">
                     <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/">Home</MudButton>
                     <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/flash">FlashCards</MudButton>
-                    <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/print">Print</MudButton>
                 </MudStack>
-
                 <MudSpacer />
                 <MudButton Variant="Variant.Text" Color="Color.Inherit" OnClick="OpenLoginDialog">Login</MudButton>
                 <MudIconButton Icon="@Icons.Material.Filled.DarkMode" />
             </MudAppBar>
 
-            <MudMainContent Style="overflow-y:auto; min-height:100vh;">
+            <!-- MudMainContent should NOT have inline styles for height/overflow -->
+            <MudMainContent>
                 <Strips />
                 @Body
                 <Shortcuts />
