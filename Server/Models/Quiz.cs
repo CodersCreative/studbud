@@ -6,6 +6,7 @@ namespace studbud.Shared.Models;
 public class DbQuiz : Record
 {
     public string? name { get; set; }
+    public float? cost {get; set;}
     public string? description { get; set; }
     public bool? published {get; set;}
     public string? userId { get; set; }
@@ -19,6 +20,7 @@ public class DbQuiz : Record
         this.published = quiz.published ?? false;
         this.description = quiz.description;
         this.userId = quiz.userId;
+        this.cost = quiz.cost;
         this.code = quiz.code;
         if (quiz.id is not null)
         {
@@ -34,6 +36,7 @@ public class DbQuiz : Record
             description = this.description,
             published = this.published ?? false,
             userId = this.userId,
+            cost = this.cost,
             code = this.code,
             id = this.Id?.DeserializeId<string>(),
         };

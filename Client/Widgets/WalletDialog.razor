@@ -25,7 +25,52 @@
                     <MudTextField T="float" Label="Money" HelperText="Add Money" @ref="moneyField" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Add" OnAdornmentClick="OnAddMoney" AdornmentAriaLabel="Add Money" />
                 }
                 <MudDivider/>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;" OnClick="OnAddMoney">Add</MudButton>
+                @if (payments.Any()) {
+                    <MudText Typo="Typo.h6" Class="mb-4">Payments</MudText>
+                    <MudStack>
+                        @foreach (var payment in payments) {
+                            <MudPaper>
+                                <MudStack>
+                                    <MudText Typo="Typo.body2" Class="mb-4">To</MudText>
+                                    <MudText Typo="Typo.h6" Class="mb-4">@payment.toId</MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-4">Reason</MudText>
+                                    @if (payment.reasonType == PaymentReasonType.Flashcard) {
+                                        <MudText Typo="Typo.body1" Class="mb-4">Flashcard Purchase - @payment.reason</MudText>
+                                    }else if (payment.reasonType == PaymentReasonType.Quiz) {
+                                        <MudText Typo="Typo.body1" Class="mb-4">Quiz Purchase - @payment.reason</MudText>
+                                    }else {
+                                        <MudText Typo="Typo.body1" Class="mb-4">Transfer - @payment.reason</MudText>
+                                    }
+                                </MudStack>
+                            </MudPaper>
+                        }
+                    </MudStack>
+                }
+                @if (incomings.Any()) {
+                    <MudText Typo="Typo.h6" Class="mb-4">Incomings</MudText>
+                    <MudStack>
+                        @foreach (var payment in incomings) {
+                            <MudPaper>
+                                <MudStack>
+                                    <MudText Typo="Typo.body2" Class="mb-4">From</MudText>
+                                    <MudText Typo="Typo.h6" Class="mb-4">@payment.fromId</MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-4">Reason</MudText>
+                                    @if (payment.reasonType == PaymentReasonType.Flashcard) {
+                                        <MudText Typo="Typo.body1" Class="mb-4">Flashcard Purchase - @payment.reason</MudText>
+                                    }else if (payment.reasonType == PaymentReasonType.Quiz) {
+                                        <MudText Typo="Typo.body1" Class="mb-4">Quiz Purchase - @payment.reason</MudText>
+                                    }else {
+                                        <MudText Typo="Typo.body1" Class="mb-4">Transfer - @payment.reason</MudText>
+                                    }
+                                </MudStack>
+                            </MudPaper>
+                        }
+                    </MudStack>
+                }
+                <MudStack Row="true">
+                    <MudButton FullWidth="true" Variant="Variant.Outlined" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;" OnClick="OnAddMoney">Transfer</MudButton>
+                    <MudButton FullWidth="true" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" style="margin: 20px 0;" OnClick="OnAddMoney">Buy</MudButton>
+                </MudStack>
                 
             }
         </MudCard>
@@ -37,7 +82,9 @@
     public Action<User?> OnUserUpdated {get; set;} = (x) => {};
     private HubConnection? hub;
     private User current_user;
-    MudTextField<float> moneyField;
+    private List<Payment> payments = [];
+    private List<Payment> incomings = [];
+    private MudTextField<float> moneyField;
     private bool allowDev = false;
 
     private async Task OnAddMoney()
@@ -64,6 +111,13 @@
         await base.OnAfterRenderAsync(firstRender);
         if (current_user is null) {
             current_user = await sessionStorage.GetItemAsync<User>("user");
+            if (current_user is not null) {
+                try {
+                    payments = await hub.InvokeAsync<List<Payment>>(nameof(IAppHubServer.GetDisplayPayments), current_user.id);
+                    incomings = payments.Where((x) => x.toId == current_user.id).ToList();
+                    payments = payments.Where((x) => x.fromId == current_user.id).ToList();
+                } catch (Exception e) {}
+            }
         }
     }
 

@@ -1,13 +1,15 @@
 ﻿@page "/flash"
 @using Microsoft.AspNetCore.SignalR.Client
 @using studbud.Client.Shared
+@using studbud.Client.Widgets
+@using studbud.Shared.Models
 @inject ISnackbar snackbar
 @inject HttpClient Http
 @layout RootLayout
 @inject IDialogService Dialog
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@inject NavigationManager navigationManager
 @inject HubService hubService
-@inject FlashcardStateService FlashcardStateService
-@inject NavigationManager NavigationManager
 
 <MudText Typo="Typo.h3" Class="mb-12 mt-20" Color="Color.Primary" Align="Align.Center">
     AI FlashCards Generator
@@ -128,7 +130,12 @@
 @if (flashcards.Any())
 {
     <MudText Typo="Typo.h5" Class="mt-8 mb-4" Align="Align.Center">Generated Flashcards</MudText>
-    <MudGrid Justify="Justify.Center">
+    <MudGrid Justify="Justify.Center" Style="padding : 50px;">
+        <MudItem xs="12" sm="6" md="4">
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" Style="height: 100%; border-radius: 12px; margin-bottom: 12px;" FullWidth="true" OnClick="OnCreate">
+                @(current_user is null ? "Login" : "Create a new Deck!")
+            </MudButton>
+        </MudItem>
         @foreach (var card in flashcards)
         {
             <MudItem xs="12" sm="6" md="4">
@@ -152,12 +159,38 @@
     private MudFileUpload<IReadOnlyList<IBrowserFile>>? _fileUpload;
     private List<FlashcardCard> flashcards = new();
     private HubConnection? hub;
+    private User? current_user;
+    private bool tried = false;
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
         hub = hubService.GetHubConnection().Build();
         await hub.StartAsync();
+    }
+
+
+    private async Task OnCreate()
+    {
+        if (current_user is null ) {
+            await Dialog.ShowAsync<LoginDialog>("",new DialogParameters() {
+            ["OnSignedIn"] = (User x) => {current_user = x; StateHasChanged();},
+            ["redirect"] = false,
+        },new DialogOptions()
+            {
+
+                CloseOnEscapeKey = true 
+            });
+        }else {
+            var flashcard = await hub!.InvokeAsync<Flashcard>(nameof(IAppHubServer.CreateFlashcard), new Flashcard {name = "New Flashcard", code = new Random().Next(999999).ToString(),description = UserNotes,userId = current_user.id, published =false});
+            for (var i = 0; i < flashcards.Count; i++)
+            {
+                flashcards[i].flashcardId = flashcard.id;
+                var c = await hub.InvokeAsync<FlashcardCard>(nameof(IAppHubServer.CreateFlashcardCard), flashcards[i]);
+            }
+            await sessionStorage.SetItemAsync("flashcardDirect", flashcard.id);
+            navigationManager.NavigateTo("/dash");
+        }
     }
 
     private async Task GenerateFromTextAsync()
@@ -184,11 +217,8 @@
             }
             else
             {
-                FlashcardStateService.SetFlashcards(response);
                 flashcards = response;
                 snackbar.Add($"Generated {response.Count} flashcards!", Severity.Success);
-
-                NavigationManager.NavigateTo("/print");
             }
         }
         catch (Exception ex)
@@ -242,11 +272,8 @@
                 }
                 else
                 {
-                    FlashcardStateService.SetFlashcards(response);
                     flashcards = response;
                     snackbar.Add($"Generated {response.Count} flashcards from {file.Name}!", Severity.Success);
-
-                    NavigationManager.NavigateTo("/print");
                 }
             }
             catch (Exception ex)
@@ -257,6 +284,16 @@
 
         _uploadedFiles.Clear();
         _fileNames.Clear();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+        if (current_user is null && !tried) {
+            current_user = await sessionStorage.GetItemAsync<User>("user");
+            tried = true;
+            StateHasChanged();
+        }
     }
 
     private async Task ClearAsync()

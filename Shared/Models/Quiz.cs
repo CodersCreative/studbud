@@ -5,6 +5,7 @@ namespace studbud.Shared.Models;
 public class Quiz
 {
     public string? name { get; set; }
+    public float? cost {get; set;}
     public bool? published {get; set;}
     public string? description { get; set; }
     public string? userId { get; set; }

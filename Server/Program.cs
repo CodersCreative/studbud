@@ -110,8 +110,8 @@ DEFINE FIELD IF NOT EXISTS userIds ON TABLE class TYPE array<string>;
 DEFINE FIELD IF NOT EXISTS teacherIds ON TABLE class TYPE array<string>;
 
 DEFINE TABLE IF NOT EXISTS chat SCHEMALESS;
-DEFINE FIELD IF NOT EXISTS name ON TABLE class TYPE option<string>;
-DEFINE FIELD IF NOT EXISTS userIds ON TABLE class TYPE array<string>;
+DEFINE FIELD IF NOT EXISTS name ON TABLE chat TYPE option<string>;
+DEFINE FIELD IF NOT EXISTS userIds ON TABLE chat TYPE array<string>;
 
 DEFINE ANALYZER chat_analyzer TOKENIZERS class, blank FILTERS lowercase, ascii;
 DEFINE INDEX name_index ON TABLE chat COLUMNS name SEARCH ANALYZER chat_analyzer BM25;
@@ -136,6 +136,7 @@ DEFINE FIELD IF NOT EXISTS userId ON TABLE submission TYPE string;
 
 DEFINE TABLE IF NOT EXISTS quiz SCHEMALESS;
 DEFINE FIELD IF NOT EXISTS name ON TABLE quiz TYPE string;
+DEFINE FIELD IF NOT EXISTS cost ON TABLE quiz TYPE float DEFAULT 0.0;
 DEFINE FIELD IF NOT EXISTS published ON TABLE quiz TYPE bool DEFAULT false;
 DEFINE FIELD IF NOT EXISTS description ON TABLE quiz TYPE string;
 DEFINE FIELD IF NOT EXISTS userId ON TABLE quiz TYPE string;
@@ -148,7 +149,8 @@ DEFINE INDEX code_index ON TABLE quiz COLUMNS code SEARCH ANALYZER quiz_analyzer
 
 DEFINE TABLE IF NOT EXISTS flashcard SCHEMALESS;
 DEFINE FIELD IF NOT EXISTS name ON TABLE flashcard TYPE string;
-DEFINE FIELD IF NOT EXISTS published ON TABLE quiz TYPE bool DEFAULT false;
+DEFINE FIELD IF NOT EXISTS cost ON TABLE flashcard TYPE float DEFAULT 0.0;
+DEFINE FIELD IF NOT EXISTS published ON TABLE flashcard TYPE bool DEFAULT false;
 DEFINE FIELD IF NOT EXISTS description ON TABLE flashcard TYPE string;
 DEFINE FIELD IF NOT EXISTS userId ON TABLE flashcard TYPE string;
 DEFINE FIELD IF NOT EXISTS code ON TABLE flashcard TYPE string;
@@ -162,6 +164,13 @@ DEFINE ANALYZER flashcard_analyzer TOKENIZERS class, blank FILTERS lowercase, as
 DEFINE INDEX name_index ON TABLE flashcard COLUMNS name SEARCH ANALYZER flashcard_analyzer BM25;
 DEFINE INDEX desc_index ON TABLE flashcard COLUMNS description SEARCH ANALYZER flashcard_analyzer BM25;
 DEFINE INDEX code_index ON TABLE flashcard COLUMNS code SEARCH ANALYZER flashcard_analyzer BM25;
+
+DEFINE TABLE IF NOT EXISTS payment SCHEMALESS;
+DEFINE FIELD IF NOT EXISTS fromId ON TABLE payment TYPE string;
+DEFINE FIELD IF NOT EXISTS toId ON TABLE payment TYPE string;
+DEFINE FIELD IF NOT EXISTS amount ON TABLE payment TYPE float;
+DEFINE FIELD IF NOT EXISTS reason ON TABLE payment TYPE string;
+DEFINE FIELD IF NOT EXISTS reasonType ON TABLE payment TYPE string;
 """
     );
 }

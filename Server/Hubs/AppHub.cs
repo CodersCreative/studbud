@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.SignalR;
 using studbud.Shared;
 using studbud.Shared.Models;
@@ -180,10 +181,12 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
             {
                 currentCard = new FlashcardCard();
                 currentCard.front = line.Replace("**Front:**", "").Replace("Front:", "").Trim();
+                currentCard.front = new Regex(@"^\s*\d+\.\s*").Replace(currentCard.front, "").Trim();
             }
             else if (line.StartsWith("**Back:**") || line.Contains("Back:"))
             {
                 currentCard!.back = line.Replace("**Back:**", "").Replace("Back:", "").Trim();
+                currentCard.back = new Regex(@"^\s*\d+\.\s*").Replace(currentCard.back, "").Trim();
                 cards.Add(currentCard);
                 currentCard = null;
             }
@@ -196,8 +199,6 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
     {
 
         var res = "";
-    
-
         if (model == "ministral" || !await IsAIAvailable())
         {
             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "Vsf0g0De4A5r0H1sWqBhI6X9qjN0R4sO");
@@ -261,6 +262,47 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
             return null;
         response.parentId = parent;
         return await SendMessage(response);
+    }
+
+    public async Task<List<Payment>> GetDisplayPayments(string userId)
+    {
+        var result = await dbClient.Query(
+            $"SELECT * FROM payment WHERE fromId = {userId} or toId = {userId};"
+        );
+
+
+        var arr = result.GetValue<List<DbPayment>>(0);
+        if (arr is not null)
+        {
+            var payments = arr.Select(x => x.ToBase()).ToList();
+            
+            for (var i = 0; payments.Count > i; i++)
+            {
+                if (payments[i].fromId == userId)
+                {
+                    payments[i].toId = (await GetUser(payments[i].toId)).username;
+                } else {
+                    payments[i].fromId = (await GetUser(payments[i].fromId)).username;
+                }
+
+                switch (payments[i].reasonType)
+                {
+                    case PaymentReasonType.Quiz:
+                        payments[i].reason = (await GetQuiz(payments[i].reason)).name;
+                        break;
+                    case PaymentReasonType.Flashcard:
+                        payments[i].reason = (await GetFlashcard(payments[i].reason)).name;
+                        break;
+                    
+                }
+            }
+
+            return payments;
+        }
+        else
+        {
+            return [];
+        }
     }
 
     public async Task ResetChat(string parent)
@@ -432,7 +474,7 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
     public async Task<List<FlashcardCard>> GetFlashcardCards(string flashId)
     {
         var result = await dbClient.Query(
-            $"SELECT * FROM flashcard_card WHERE flashcardId = {flashId} ORDER BY id ASC;"
+            $"SELECT * FROM flashcard_card WHERE flashcardId = {flashId} ORDER BY front ASC;"
         );
         var arr = result.GetValue<List<DbFlashcardCard>>(0);
         if (arr is not null)

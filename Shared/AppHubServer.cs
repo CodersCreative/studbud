@@ -20,6 +20,7 @@ public interface IAppHubServer
     Task<Class?> JoinClass(string userId, string code);
     Task ConnectToChat(string parent);
     Task<List<Message>> GetMessages(string parent);
+    Task<List<Payment>> GetDisplayPayments(string userId);
     Task<User?> GetUserFromUsername(string username);
     Task<Chat> GetChat(string id);
     Task<Class> UpdateClassInfo(string classId, string? name, string? description);

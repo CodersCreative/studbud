@@ -1,8 +1,12 @@
 @page "/dash"
+@using Microsoft.AspNetCore.SignalR.Client
 @using studbud.Client.Pages.DashboardPages
+@using studbud.Client.Shared
 @using studbud.Client.Widgets
 @using studbud.Shared.Models
 @inject NavigationManager navigationManager
+@inject Blazored.SessionStorage.ISessionStorageService sessionStorage
+@inject HubService hubService
 @layout MinLayout
 
 <MudLayout>
@@ -63,13 +67,14 @@
 @code {
     private bool open = false;
     private Page page = Page.Home;
-
+    private HubConnection? hub;
     private Class? clss;
     private Chat? chat;
     private Quiz? quiz;
     private bool? editingQuiz;
     private Flashcard? flashcard;
     private bool? editingFlashcard;
+    private User? current_user;
 
     enum Page {
         Home,
@@ -91,5 +96,29 @@
 
     private void OnBack() {
         navigationManager.NavigateTo("/");
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        hub = hubService.GetHubConnection().Build();
+        await hub.StartAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+        if (current_user is null) {
+            current_user = await sessionStorage.GetItemAsync<User>("user");
+            if (current_user is null) OnBack();
+            
+            var dirFlash = await sessionStorage.GetItemAsync<string>("flashcardDirect");
+            if (dirFlash is not null) {
+                flashcard = await hub!.InvokeAsync<Flashcard>(nameof(IAppHubServer.GetFlashcard), dirFlash);
+                editingFlashcard = true;
+                page = Page.Flashcard;
+            }
+            StateHasChanged();
+        }
     }
 }

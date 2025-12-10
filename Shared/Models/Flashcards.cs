@@ -1,6 +1,7 @@
 public class Flashcard
 {
     public string? id { get; set; }
+    public float? cost {get; set;}
     public string? userId { get; set; }
     public bool? published {get; set;}
     public string? name { get; set; }

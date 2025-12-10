@@ -3,6 +3,7 @@ using SurrealDb.Net.Models;
 public class DbFlashcard : Record
 {
     public string? userId { get; set; }
+    public float? cost {get; set;}
     public string? name { get; set; }
     public bool? published {get; set;}
     public string? description { get; set; }
@@ -15,6 +16,7 @@ public class DbFlashcard : Record
         this.published = quiz.published ?? false;
         this.description = quiz.description;
         this.userId = quiz.userId;
+        this.cost = quiz.cost ?? 0.0f;
         this.code = quiz.code;
         if (quiz.id is not null)
         {
@@ -30,6 +32,7 @@ public class DbFlashcard : Record
             description = this.description,
             published = this.published ?? false,
             userId = this.userId,
+            cost = this.cost ?? 0.0f,
             code = this.code,
             id = this.Id?.DeserializeId<string>(),
         };
