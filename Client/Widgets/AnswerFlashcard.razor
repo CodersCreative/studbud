@@ -17,9 +17,7 @@
             <MudSpacer />
         </MudStack>
         <MudDivider/>
-        <MudText Typo="Typo.h6" Style="font-weight: bold;" Class="mt-8">
-            Description
-        </MudText>
+        <MudText Typo="Typo.body2" Style="font-weight: bold;" Class="mt-8">Description</MudText>
         <MudMarkdown Value="@flashcard.description" />
         <MudDivider/>
             <MudStack Row="true">
@@ -30,11 +28,17 @@
         <MudDivider/>
         @if (cards.Count >= showing && showing >= 1) {
             <MudCarousel Style="min-height : 50vh; height : 100%;" AutoCycle="false" Class="mud-width-full" ShowBullets="false" TData="object">
-                <MudCarouselItem Style="overflow:scroll; padding : 20px; border-radius : 20px;" Color="@Color.Default">
-                    <MudMarkdown Value="@(cards[getShowing()].front)" />
+                <MudCarouselItem Style="overflow:scroll; padding : 20px; border-radius : 20px;" Color="@Color.Surface">
+                    <MudStack>
+                        <MudText Typo="Typo.body2" Style="font-weight: bold;" Class="mt-8">Front</MudText>
+                        <MudMarkdown Value="@(cards[getShowing()].front)" />
+                    </MudStack>
                 </MudCarouselItem>
                 <MudCarouselItem Style="overflow:scroll; padding : 20px; border-radius : 20px;" Color="@Color.Surface">
-                    <MudMarkdown Value="@(cards[getShowing()].back)" />
+                    <MudStack>
+                        <MudText Typo="Typo.body2" Style="font-weight: bold;" Class="mt-8">Back</MudText>
+                        <MudMarkdown Value="@(cards[getShowing()].back)" />
+                    </MudStack>
                 </MudCarouselItem>
             </MudCarousel>
         } else {
@@ -72,6 +76,7 @@
             current_user = await sessionStorage.GetItemAsync<User>("user");
             flashcard = await hub.InvokeAsync<Flashcard>(nameof(IAppHubServer.GetFlashcard), flashcard.id);
             cards = await hub.InvokeAsync<List<FlashcardCard>>(nameof(IAppHubServer.GetFlashcardCards), flashcard.id);
+            cards = cards.Shuffle().ToList();
 
             if (cards.Count <= 0) {
                 var c = new FlashcardCard { front = "", back = "",flashcardId = flashcard.id};

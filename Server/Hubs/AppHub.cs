@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.SignalR;
 using studbud.Shared;
 using studbud.Shared.Models;
@@ -180,10 +181,12 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
             {
                 currentCard = new FlashcardCard();
                 currentCard.front = line.Replace("**Front:**", "").Replace("Front:", "").Trim();
+                currentCard.front = new Regex(@"^\s*\d+\.\s*").Replace(currentCard.front, "").Trim();
             }
             else if (line.StartsWith("**Back:**") || line.Contains("Back:"))
             {
                 currentCard!.back = line.Replace("**Back:**", "").Replace("Back:", "").Trim();
+                currentCard.back = new Regex(@"^\s*\d+\.\s*").Replace(currentCard.back, "").Trim();
                 cards.Add(currentCard);
                 currentCard = null;
             }
@@ -196,8 +199,6 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
     {
 
         var res = "";
-    
-
         if (model == "ministral" || !await IsAIAvailable())
         {
             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "Vsf0g0De4A5r0H1sWqBhI6X9qjN0R4sO");
@@ -432,7 +433,7 @@ public class AppHub : Hub<IAppHubClient>, IAppHubServer
     public async Task<List<FlashcardCard>> GetFlashcardCards(string flashId)
     {
         var result = await dbClient.Query(
-            $"SELECT * FROM flashcard_card WHERE flashcardId = {flashId} ORDER BY id ASC;"
+            $"SELECT * FROM flashcard_card WHERE flashcardId = {flashId} ORDER BY front ASC;"
         );
         var arr = result.GetValue<List<DbFlashcardCard>>(0);
         if (arr is not null)

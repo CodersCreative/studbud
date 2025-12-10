@@ -36,6 +36,10 @@
 </MudDialog>
 
 @code {
+    [Parameter]
+    public Action<User?> OnSignedIn {get; set;} = (x) => {};
+    [Parameter]
+    public bool redirect {get; set;} = true;
     private HubConnection? hub;
     private MudTextField<string> usernameField;
     private MudTextField<string> emailField;
@@ -76,9 +80,12 @@
     {
         await base.OnAfterRenderAsync(firstRender);
 
-        if (await hubService.AutoLogin(hub) is not null) {
-            navigationManager.NavigateTo("/dash");
-            return;
+        var user = await hubService.AutoLogin(hub);
+        if (user is not null) {
+            OnSignedIn(user);
+            if (redirect) {
+                navigationManager.NavigateTo("/dash");
+            }
         }
     }
 
@@ -92,14 +99,19 @@
 
         if (user is not null) {
             await sessionStorage.SetItemAsync("user", user);
-            navigationManager.NavigateTo("/dash");
+            OnSignedIn(user);
+            if (redirect) {
+                navigationManager.NavigateTo("/dash");
+            }
             StateHasChanged();
         }
     }
 
 
     private Task OnLogin() {
-        return Dialog.ShowAsync<LoginDialog>("",new DialogOptions()
+        return Dialog.ShowAsync<LoginDialog>("", new DialogParameters() {
+            ["OnSignedIn"] = OnSignedIn
+        },new DialogOptions()
         {
 
             CloseOnEscapeKey = true 
