@@ -72,7 +72,7 @@
     <MudItem xs="12" md="8" lg="8">
         <MudCard Style="border-radius: 16px;" Elevation="4" Class="p-2">
             <MudCardContent>
-                <MudTabs Rounded="true" RoundedSize="Medium" Elevation="2" Class="mt-6">
+                <MudTabs Rounded="true" RoundedSize="Medium" Elevation="2" Class="mt-1">
                     <!-- Tab 1: Type Notes -->
                     <MudTabPanel Text="Type Notes">
                         <MudTextField @bind-Value="UserNotes"
@@ -126,6 +126,9 @@
         </MudCard>
     </MudItem>
 </MudGrid>
+
+<br />
+
 
 @if (flashcards.Any())
 {

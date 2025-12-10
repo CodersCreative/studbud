@@ -7,33 +7,53 @@
 <MudPopoverProvider/>
 <MudDialogProvider/>
 <MudSnackbarProvider/>
+<div class="gradient-bg">
+    <!-- Animated blobs -->
+    <div class="gradients-container">
+        <div class="blob blob1"></div>
+        <div class="blob blob2"></div>
+        <div class="blob blob3"></div>
+    </div>
 
-<MudLayout Class="no-x-overflow">
-    <MudAppBar Elevation="0">
-        <MudText Typo="Typo.h5" Class="ml-3">StudBud</MudText>
+    <!-- Scrollable content -->
+    <div class="scrollable-content">
+        <MudLayout Class="no-x-overflow">
+            <MudAppBar Elevation="0">
+                <MudText Typo="Typo.h5" Class="ml-3">StudBud</MudText>
 
-        @* Left-side buttons *@
-        <MudStack Row="true" Spacing="2" Class="ml-4">
-            <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/">Home</MudButton>
-            <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/flash">FlashCards</MudButton>
-            <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/print">Print</MudButton>
-        </MudStack>
+                <MudStack Row="true" Spacing="2" Class="ml-4">
+                    <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/">Home</MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/flash">FlashCards</MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/print">Print</MudButton>
+                </MudStack>
 
-        <MudSpacer />
+                <MudSpacer />
+                <MudButton Variant="Variant.Text" Color="Color.Inherit" OnClick="OpenLoginDialog">Login</MudButton>
+                <MudIconButton Icon="@Icons.Material.Filled.DarkMode" />
+            </MudAppBar>
 
-        @* Right-side buttons *@
-        <MudButton Variant="Variant.Text" Color="Color.Inherit" OnClick="OpenLoginDialog">Login</MudButton>
-        <MudIconButton Icon="@Icons.Material.Filled.DarkMode" />
+            <MudMainContent Style="overflow-y:auto; min-height:100vh;">
+                <Strips />
+                @Body
+                <Shortcuts />
+                <MudPaper Class="mt-15 w-100 pa-4"
+                          Style="background-color:#1e1e2d; width:100%; display:block; min-height:20vh;">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.h5">Information</MudText>
+                        <MudDivider Light="true" Class="mb-4" />
+                        <MudText Typo="Typo.body2" Class="ml-5">Our Plans</MudText>
+                        <MudText Typo="Typo.body2" Class="ml-5">Help Center</MudText>
+                        <MudText Typo="Typo.body2" Class="ml-5">Contact</MudText>
+                    </MudStack>
+                    <MudDivider Light="true" Class="mt-4" />
+                    <MudText Typo="Typo.body2" Class="mt-2 mb-4">All rights reserved</MudText>
+                </MudPaper>
+            </MudMainContent>
+        </MudLayout>
+    </div>
+</div>
 
-    </MudAppBar>
 
-    <MudMainContent>
-        <Strips/>
-        @Body
-        <Shortcuts/>
-    </MudMainContent>
-
-</MudLayout>
 
 
 
@@ -61,7 +81,18 @@
             LayoutProperties = new LayoutProperties()
         };
     }
-
+    MudTheme MyCustomTheme = new MudTheme()
+    {
+        Typography = new Typography()
+        {
+            Default = new DefaultTypography()
+            {
+                FontFamily = new[] { "Dongle", "sans-serif" },
+                FontSize = "1.625rem" /* e.g., 26px, adjust as needed */
+            },
+            // You can also adjust other typos like H6, Button, etc.
+        }
+    };
     private readonly PaletteLight _lightPalette = new()
     {
         Black = "#110e2d",
